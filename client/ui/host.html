@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Remotely</title>
+  <style>
+    :root { color-scheme: dark; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #e7ecf6; margin: 0; padding: 24px; }
+    h1 { margin: 0 0 12px; font-size: 20px; }
+    h3 { margin: 18px 0 6px; font-size: 13px; font-weight: 600; color: rgba(231,236,246,0.75); text-transform: uppercase; letter-spacing: 0.08em; }
+    .row { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; background: #94a3b8; }
+    .dot.online { background: #4ade80; }
+    .dot.error  { background: #f87171; }
+    label { font-size: 13px; }
+    input[type=checkbox] { transform: translateY(1px); }
+    input[type=password], input[type=text] {
+      background: rgba(255,255,255,0.06); color: #fff;
+      border: 1px solid rgba(255,255,255,0.12); border-radius: 6px;
+      padding: 6px 10px; font-size: 14px; width: 120px; box-sizing: border-box;
+    }
+    .pin-row { display: flex; gap: 8px; align-items: center; }
+    .pin-status { font-size: 12px; color: rgba(231,236,246,0.6); }
+    pre {
+      background: rgba(255,255,255,0.05); border-radius: 6px; padding: 10px;
+      font-size: 11px; color: rgba(231,236,246,0.7);
+      height: 180px; overflow: auto; white-space: pre-wrap;
+    }
+    button {
+      background: rgba(255,255,255,0.06); color: white;
+      border: 1px solid rgba(255,255,255,0.12);
+      padding: 6px 12px; border-radius: 6px; cursor: pointer;
+      font-size: 13px;
+    }
+    button:hover { background: rgba(255,255,255,0.1); }
+    button.primary { background: #2a6df4; border-color: #2a6df4; }
+    button.primary:hover { background: #3a7df4; }
+    .footer { margin-top: 18px; display: flex; gap: 8px; }
+    .small { font-size: 11px; color: rgba(231,236,246,0.5); }
+  </style>
+</head>
+<body>
+  <h1>Remotely</h1>
+  <div class="row"><span id="dot" class="dot"></span><span id="state">Connecting…</span></div>
+
+  <h3>Unattended access</h3>
+  <div class="row">
+    <label><input type="checkbox" id="unattended"> Start with Windows</label>
+  </div>
+  <div class="pin-row">
+    <input id="pin" type="password" inputmode="numeric" maxlength="8" placeholder="PIN (4–8 digits)">
+    <button id="setPin">Set PIN</button>
+    <button id="clearPin">Clear</button>
+    <span id="pinStatus" class="pin-status"></span>
+  </div>
+  <div class="small">A PIN is required from the viewer before unattended sessions can start.</div>
+
+  <h3>Activity</h3>
+  <pre id="log"></pre>
+
+  <div class="footer">
+    <button id="checkUpdate">Check for updates</button>
+    <button id="hide">Hide to tray</button>
+  </div>
+
+  <script>
+    const dot = document.getElementById('dot');
+    const state = document.getElementById('state');
+    const log = document.getElementById('log');
+    const pinStatus = document.getElementById('pinStatus');
+
+    function append(line) { log.textContent += '\n' + line; log.scrollTop = log.scrollHeight; }
+    window.remotely.onLog((line) => {
+      append(line);
+      if (line.startsWith('STATE: ')) {
+        const s = line.slice(7);
+        state.textContent = s;
+        dot.className = 'dot ' + (s === 'connected' || s === 'streaming' ? 'online' : s.startsWith('error') ? 'error' : '');
+      }
+    });
+
+    document.getElementById('hide').onclick = () => window.close();
+
+    (async () => {
+      const cb = document.getElementById('unattended');
+      cb.checked = await window.remotely.getUnattended();
+      cb.addEventListener('change', async () => {
+        cb.checked = await window.remotely.setUnattended(cb.checked);
+      });
+
+      async function refreshPinStatus() {
+        const set = await window.remotely.getUnattendedPinSet();
+        pinStatus.textContent = set ? 'PIN is set' : 'no PIN set';
+        pinStatus.style.color = set ? '#86efac' : 'rgba(231,236,246,0.5)';
+      }
+      refreshPinStatus();
+
+      document.getElementById('setPin').onclick = async () => {
+        const pin = document.getElementById('pin').value.trim();
+        if (!/^\d{4,8}$/.test(pin)) {
+          pinStatus.style.color = '#fca5a5';
+          pinStatus.textContent = 'PIN must be 4–8 digits';
+          return;
+        }
+        try {
+          await window.remotely.setUnattendedPin(pin);
+          document.getElementById('pin').value = '';
+          await refreshPinStatus();
+        } catch (e) {
+          pinStatus.style.color = '#fca5a5';
+          pinStatus.textContent = e.message || String(e);
+        }
+      };
+
+      document.getElementById('clearPin').onclick = async () => {
+        await window.remotely.setUnattendedPin('');
+        await refreshPinStatus();
+      };
+    })();
+
+    document.getElementById('checkUpdate').onclick = async () => {
+      append('Checking for updates…');
+      try {
+        const r = await window.remotely.checkForUpdates();
+        if (r.available) append(`Update ${r.version} available — will install on next quit.`);
+        else if (r.reason === 'updater_not_built') append('Auto-update is not built into this binary.');
+        else append('Already up to date.');
+      } catch (e) { append('Update check failed: ' + e.message); }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Entitlements requested by the Remotely host on macOS.
+
+  - hardened runtime is required for notarization
+  - allow-unsigned-executable-memory + allow-jit are required by Electron
+  - screen-capture is requested at runtime via ScreenCaptureKit / desktopCapturer;
+    the user must grant Screen Recording permission in System Settings -> Privacy
+  - accessibility is requested at runtime for synthetic mouse/keyboard injection
+-->
+<plist version="1.0">
+<dict>
+  <key>com.apple.security.cs.allow-jit</key><true/>
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key><true/>
+  <key>com.apple.security.cs.disable-library-validation</key><true/>
+  <key>com.apple.security.network.client</key><true/>
+  <key>com.apple.security.device.audio-input</key><false/>
+  <key>com.apple.security.device.camera</key><false/>
+</dict>
+</plist>

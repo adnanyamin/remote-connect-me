@@ -1,0 +1,25 @@
+{
+  "name": "remotely",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Open-source LogMeIn-style remote desktop",
+  "engines": {
+    "node": ">=20 <21",
+    "npm": ">=10"
+  },
+  "workspaces": [
+    "web",
+    "signaling",
+    "client"
+  ],
+  "scripts": {
+    "dev:signaling": "npm --workspace signaling start",
+    "dev:web": "npm --workspace web run dev",
+    "dev:client": "npm --workspace client start",
+    "sbom": "bash scripts/sbom.sh",
+    "test:signaling": "node signaling/test/reject.test.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^7.8.0"
+  }
+}

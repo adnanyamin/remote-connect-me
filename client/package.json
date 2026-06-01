@@ -1,0 +1,75 @@
+{
+  "name": "@remotely/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Remotely Electron host client",
+  "main": "main.js",
+  "engines": {
+    "node": ">=20 <21",
+    "npm": ">=10"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dist": "electron-builder --win --mac --linux",
+    "dist:win": "electron-builder --win",
+    "dist:mac": "electron-builder --mac",
+    "dist:linux": "electron-builder --linux",
+    "sbom": "npm sbom --sbom-format cyclonedx --omit dev > sbom.client.cdx.json"
+  },
+  "dependencies": {
+    "auto-launch": "^5.0.6",
+    "electron-updater": "^6.1.8",
+    "keytar": "^7.9.0",
+    "node-fetch": "^2.7.0",
+    "ws": "^8.16.0"
+  },
+  "optionalDependencies": {
+    "@nut-tree-fork/nut-js": "^4.2.6",
+    "@sentry/electron": "^4.18.0"
+  },
+  "devDependencies": {
+    "@electron/notarize": "2.3.0",
+    "electron": "29.1.0",
+    "electron-builder": "24.13.0"
+  },
+  "build": {
+    "appId": "com.remotely.client",
+    "productName": "Remotely",
+    "files": ["main.js", "preload.js", "ui/**", "lib/**"],
+    "afterSign": "build/notarize.js",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "REPLACE_ME_GITHUB_OWNER",
+        "repo": "REPLACE_ME_GITHUB_REPO"
+      }
+    ],
+    "win": {
+      "target": ["nsis"],
+      "icon": "build/icon.ico",
+      "signingHashAlgorithms": ["sha256"]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": true,
+      "allowToChangeInstallationDirectory": true
+    },
+    "mac": {
+      "target": ["dmg", "zip"],
+      "category": "public.app-category.utilities",
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "build/entitlements.mac.plist",
+      "entitlementsInherit": "build/entitlements.mac.plist"
+    },
+    "dmg": {
+      "sign": false
+    },
+    "linux": {
+      "target": ["AppImage", "deb", "rpm"],
+      "category": "Network",
+      "maintainer": "Remotely <REPLACE_ME@example.com>"
+    }
+  }
+}

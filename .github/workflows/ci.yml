@@ -1,0 +1,79 @@
+name: ci
+
+# Fast checks on every push / PR. The heavy cross-platform packaging lives in
+# release.yml (tag-triggered); this is just typecheck + build + syntax.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    env:
+      # Prisma + Next need these present at build time. Dev/dummy values are
+      # fine — CI never connects to a real DB or signs real tokens.
+      DATABASE_URL: "file:./prisma/dev.db"
+      JWT_SECRET: "ci-dummy-jwt-secret"
+      SIGNALING_SECRET: "ci-dummy-signaling-secret"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      # Installs all workspaces from the root lockfile. The web workspace's
+      # postinstall runs `prisma generate`, so the client is ready for tsc.
+      - name: Install
+        run: npm ci
+
+      - name: Prisma generate (explicit, in case postinstall was skipped)
+        working-directory: web
+        run: npx prisma generate
+
+      - name: Typecheck
+        working-directory: web
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: web
+        run: npm run build
+
+  static-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+
+      # Cheap syntax validation of the non-TypeScript surfaces (signaling
+      # server + Electron main/preload/renderer + build hooks). Catches the
+      # kind of truncation/paren mistakes a full build would otherwise hide.
+      - name: node --check JS sources
+        run: |
+          node --check signaling/server.js
+          node --check client/main.js
+          node --check client/preload.js
+          node --check client/ui/session.js
+          node --check client/build/notarize.js
+
+  signaling:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Signaling protocol test
+        run: node signaling/test/reject.test.js

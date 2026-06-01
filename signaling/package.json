@@ -1,0 +1,17 @@
+{
+  "name": "@remotely/signaling",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WebRTC signaling server for Remotely",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.16.0"
+  },
+  "optionalDependencies": {
+    "@sentry/node": "^7.110.0"
+  }
+}

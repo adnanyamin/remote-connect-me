@@ -1,0 +1,15 @@
+# Remotely security disclosure policy (RFC 9116)
+# Served statically by Next.js from web/public at:
+#   https://app.yourdomain.com/.well-known/security.txt
+#
+# Update the placeholder contacts/URLs and the Expires date before going live.
+# Expires should be < 1 year out; refresh it on each review.
+
+Contact: mailto:security@yourdomain.com
+Expires: 2027-01-01T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://app.yourdomain.com/.well-known/security.txt
+Policy: https://app.yourdomain.com/security-policy
+Acknowledgments: https://app.yourdomain.com/security-acknowledgments
+# Optional: publish a PGP key and reference it here.
+# Encryption: https://app.yourdomain.com/.well-known/pgp-key.txt
