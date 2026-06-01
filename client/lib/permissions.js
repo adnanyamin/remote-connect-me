@@ -58,11 +58,11 @@ function logWarnings(logFn = console.warn) {
   if (isMac()) {
     if (s.screen !== 'granted') {
       logFn(`[permissions] Screen Recording status: ${s.screen}. ` +
-        'Grant Remotely access in System Settings -> Privacy & Security -> Screen Recording, then restart.');
+        'Grant RemoteConnectMe access in System Settings -> Privacy & Security -> Screen Recording, then restart.');
     }
     if (!s.accessibility) {
       logFn('[permissions] Accessibility access not granted. Synthetic mouse/keyboard ' +
-        'injection will be a no-op until you add Remotely under ' +
+        'injection will be a no-op until you add RemoteConnectMe under ' +
         'System Settings -> Privacy & Security -> Accessibility.');
     }
   }

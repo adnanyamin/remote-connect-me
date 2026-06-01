@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     data: { mfaSecret: base32, mfaRecoveryCodes: null },
   });
 
-  const issuer = process.env.APP_NAME || 'Remotely';
+  const issuer = process.env.APP_NAME || 'RemoteConnectMe';
   const url = otpauthUrl({ issuer, account: user.email, secret: base32 });
 
   await writeAudit({ action: 'mfa.enroll.start', userId: user.id, req });

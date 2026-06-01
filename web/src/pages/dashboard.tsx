@@ -104,11 +104,11 @@ export default function Dashboard() {
 
   return (
     <>
-      <Head><title>Dashboard · Remotely</title></Head>
+      <Head><title>Dashboard · RemoteConnectMe</title></Head>
       <div className="min-h-screen">
         <header className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto w-full">
           <div className="flex items-baseline gap-3">
-            <div className="font-semibold text-lg">Remotely</div>
+            <div className="font-semibold text-lg">RemoteConnectMe</div>
             {me?.activeOrg && orgs.length > 1 ? (
               <select
                 className="text-sm bg-white/5 hover:bg-white/10 rounded px-2 py-1"
@@ -218,7 +218,7 @@ export default function Dashboard() {
               </>
             ) : (
               <>
-                <p className="text-white/70 text-sm">In the Remotely Windows client, paste this code to finish pairing:</p>
+                <p className="text-white/70 text-sm">In the RemoteConnectMe Windows client, paste this code to finish pairing:</p>
                 <div className="text-center text-3xl tracking-[0.4em] font-mono py-6 rounded-md bg-white/5 select-all">
                   {pair.pairCode}
                 </div>

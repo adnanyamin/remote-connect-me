@@ -92,10 +92,10 @@ export default function RecordingsPage() {
 
   return (
     <>
-      <Head><title>Recordings · Remotely</title></Head>
+      <Head><title>Recordings · RemoteConnectMe</title></Head>
       <div className="min-h-screen">
         <header className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto w-full">
-          <div className="font-semibold text-lg">Remotely</div>
+          <div className="font-semibold text-lg">RemoteConnectMe</div>
           <div className="flex items-center gap-3 text-sm">
             <Link href="/dashboard" className="btn-ghost">Dashboard</Link>
             <Link href="/settings" className="btn-ghost">Settings</Link>

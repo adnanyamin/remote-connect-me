@@ -1,5 +1,5 @@
 /**
- * Remotely signaling server.
+ * RemoteConnectMe signaling server.
  *
  * Responsibilities:
  *  - Accept WebSocket connections from web viewers and Electron hosts

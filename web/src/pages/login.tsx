@@ -55,7 +55,7 @@ export default function Login() {
 
   return (
     <>
-      <Head><title>Sign in · Remotely</title></Head>
+      <Head><title>Sign in · RemoteConnectMe</title></Head>
       <div className="min-h-screen grid place-items-center px-6">
         {stage === 'creds' ? (
           <form onSubmit={submitCreds} className="card w-full max-w-md space-y-4">

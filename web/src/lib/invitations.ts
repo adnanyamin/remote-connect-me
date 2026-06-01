@@ -32,9 +32,9 @@ export function inviteEmailBody(opts: {
   link: string;
 }): { subject: string; text: string } {
   const inviter = opts.inviterEmail ? `${opts.inviterEmail} ` : '';
-  const subject = `${inviter || 'Someone'}invited you to ${opts.orgName} on Remotely`;
+  const subject = `${inviter || 'Someone'}invited you to ${opts.orgName} on RemoteConnectMe`;
   const text =
-    `${inviter || 'A teammate'}invited you to join "${opts.orgName}" on Remotely as a ${opts.role}.\n\n` +
+    `${inviter || 'A teammate'}invited you to join "${opts.orgName}" on RemoteConnectMe as a ${opts.role}.\n\n` +
     `Accept the invitation here (expires in 7 days):\n\n` +
     `${opts.link}\n\n` +
     `If you weren't expecting this, ignore the email — the invite expires automatically.`;

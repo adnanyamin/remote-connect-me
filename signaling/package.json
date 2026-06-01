@@ -1,8 +1,8 @@
 {
-  "name": "@remotely/signaling",
+  "name": "@remoteconnectme/signaling",
   "version": "0.1.0",
   "private": true,
-  "description": "WebRTC signaling server for Remotely",
+  "description": "WebRTC signaling server for RemoteConnectMe",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"

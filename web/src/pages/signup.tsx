@@ -28,7 +28,7 @@ export default function Signup() {
 
   return (
     <>
-      <Head><title>Sign up · Remotely</title></Head>
+      <Head><title>Sign up · RemoteConnectMe</title></Head>
       <div className="min-h-screen grid place-items-center px-6">
         <form onSubmit={submit} className="card w-full max-w-md space-y-4">
           <h1 className="text-2xl font-semibold">Create your account</h1>

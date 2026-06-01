@@ -71,7 +71,7 @@ export default function InvitePage() {
 
   return (
     <>
-      <Head><title>Invitation · Remotely</title></Head>
+      <Head><title>Invitation · RemoteConnectMe</title></Head>
       <div className="min-h-screen grid place-items-center px-6">
         <div className="card w-full max-w-md space-y-4">
           <h1 className="text-2xl font-semibold">You're invited</h1>

@@ -505,7 +505,7 @@ export default function Connect() {
 
   return (
     <>
-      <Head><title>Connecting · Remotely</title></Head>
+      <Head><title>Connecting · RemoteConnectMe</title></Head>
       <div className="min-h-screen flex flex-col bg-black text-white">
         <header className="px-4 py-2 bg-black/40 flex flex-wrap items-center gap-3 text-sm">
           <button className="px-2 py-1 rounded hover:bg-white/10" onClick={() => router.push('/dashboard')}>← Back</button>

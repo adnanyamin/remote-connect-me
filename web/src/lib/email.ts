@@ -12,7 +12,7 @@ import { randomBytes, createHash } from 'crypto';
  */
 
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
-const EMAIL_FROM = process.env.EMAIL_FROM || 'Remotely <no-reply@example.com>';
+const EMAIL_FROM = process.env.EMAIL_FROM || 'RemoteConnectMe <no-reply@example.com>';
 const APP_BASE_URL = process.env.APP_BASE_URL || 'http://localhost:3000';
 
 export interface SendArgs {

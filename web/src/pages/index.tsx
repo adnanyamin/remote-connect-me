@@ -4,10 +4,10 @@ import Head from 'next/head';
 export default function Landing() {
   return (
     <>
-      <Head><title>Remotely — free remote desktop</title></Head>
+      <Head><title>RemoteConnectMe — free remote desktop</title></Head>
       <div className="min-h-screen flex flex-col">
         <header className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto w-full">
-          <div className="font-semibold text-lg">Remotely</div>
+          <div className="font-semibold text-lg">RemoteConnectMe</div>
           <nav className="flex gap-3 text-sm">
             <Link href="/login" className="btn-ghost">Sign in</Link>
             <Link href="/signup" className="btn-primary">Get started</Link>

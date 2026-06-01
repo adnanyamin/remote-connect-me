@@ -9,7 +9,7 @@ export default function Document() {
         <meta name="theme-color" content="#0b1020" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Remotely" />
+        <meta name="apple-mobile-web-app-title" content="RemoteConnectMe" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
         {/* Mobile viewport — disable user pinch-zoom so we can capture pinch
             gestures and forward them as scroll/zoom over the data channel. */}

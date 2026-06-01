@@ -62,9 +62,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     await sendEmail({
       to: user.email,
-      subject: 'Verify your Remotely account',
+      subject: 'Verify your RemoteConnectMe account',
       text:
-        `Welcome to Remotely!\n\n` +
+        `Welcome to RemoteConnectMe!\n\n` +
         `Click the link below to verify your email address (expires in 24h):\n\n` +
         `${verificationLink(plaintext)}\n\n` +
         `If you didn't sign up, you can ignore this email.`,

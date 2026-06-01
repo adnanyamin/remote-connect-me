@@ -1,8 +1,8 @@
 {
-  "name": "@remotely/client",
+  "name": "@remoteconnectme/client",
   "version": "0.1.0",
   "private": true,
-  "description": "Remotely Electron host client",
+  "description": "RemoteConnectMe Electron host client",
   "main": "main.js",
   "engines": {
     "node": ">=20 <21",
@@ -35,7 +35,7 @@
   },
   "build": {
     "appId": "com.remotely.client",
-    "productName": "Remotely",
+    "productName": "RemoteConnectMe",
     "files": ["main.js", "preload.js", "ui/**", "lib/**"],
     "afterSign": "build/notarize.js",
     "publish": [
@@ -69,7 +69,7 @@
     "linux": {
       "target": ["AppImage", "deb", "rpm"],
       "category": "Network",
-      "maintainer": "Remotely <REPLACE_ME@example.com>"
+      "maintainer": "RemoteConnectMe <REPLACE_ME@example.com>"
     }
   }
 }

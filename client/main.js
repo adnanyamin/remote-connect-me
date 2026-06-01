@@ -1,5 +1,5 @@
 /**
- * Remotely Electron host (main process).
+ * RemoteConnectMe Electron host (main process).
  *
  * Lifecycle:
  *   - On launch, load device key from OS keychain.
@@ -57,14 +57,14 @@ try {
   autoUpdater.on('update-downloaded', (info) => {
     console.log('[updater] update downloaded:', info?.version);
     if (statusWin && !statusWin.isDestroyed()) {
-      statusWin.webContents.send('log', `Update ${info?.version} ready — restart Remotely to apply.`);
+      statusWin.webContents.send('log', `Update ${info?.version} ready — restart RemoteConnectMe to apply.`);
     }
   });
 } catch (e) {
   console.warn('[updater] not available (skipping):', e?.message);
 }
 
-const SERVICE = 'Remotely';
+const SERVICE = 'RemoteConnectMe';
 const ACCOUNT = 'device-key';
 const ACCOUNT_UNATTENDED_PIN = 'unattended-pin-hash';
 const DEFAULT_API_BASE = 'http://localhost:3000';
@@ -90,7 +90,7 @@ function clearKey() { return keytar.deletePassword(SERVICE, ACCOUNT); }
 async function showPairWindow() {
   if (pairWin && !pairWin.isDestroyed()) { pairWin.focus(); return; }
   pairWin = new BrowserWindow({
-    width: 480, height: 540, resizable: false, title: 'Pair Remotely',
+    width: 480, height: 540, resizable: false, title: 'Pair RemoteConnectMe',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true },
   });
   pairWin.loadFile(path.join(__dirname, 'ui', 'pair.html'));
@@ -100,7 +100,7 @@ async function showPairWindow() {
 async function showStatusWindow() {
   if (statusWin && !statusWin.isDestroyed()) { statusWin.show(); return; }
   statusWin = new BrowserWindow({
-    width: 480, height: 620, resizable: false, title: 'Remotely',
+    width: 480, height: 620, resizable: false, title: 'RemoteConnectMe',
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true },
   });
   statusWin.loadFile(path.join(__dirname, 'ui', 'host.html'));
@@ -126,7 +126,7 @@ function buildTray() {
   if (tray) return;
   const img = nativeImage.createEmpty();
   tray = new Tray(img);
-  tray.setToolTip('Remotely');
+  tray.setToolTip('RemoteConnectMe');
   tray.setContextMenu(Menu.buildFromTemplate([
     { label: 'Show window', click: () => showStatusWindow() },
     { label: 'Open dashboard', click: () => shell.openExternal(config.apiBase + '/dashboard') },
@@ -207,7 +207,7 @@ ipcMain.handle('getConnectToken', async () => {
  * the requesting user's email). For now the dialog says "a remote user".
  */
 ipcMain.handle('requestSessionApproval', async (_e, info) => {
-  // Surface the window so the user actually sees the dialog if Remotely was
+  // Surface the window so the user actually sees the dialog if RemoteConnectMe was
   // minimized to the tray.
   if (statusWin && !statusWin.isDestroyed()) statusWin.show();
   const result = await dialog.showMessageBox(statusWin || undefined, {
@@ -256,12 +256,12 @@ ipcMain.handle('getTurnCredentials', async () => {
 // ---- Unattended access ----
 
 ipcMain.handle('setUnattended', async (_e, enable) => {
-  const launcher = new AutoLaunch({ name: 'Remotely', path: process.execPath });
+  const launcher = new AutoLaunch({ name: 'RemoteConnectMe', path: process.execPath });
   if (enable) await launcher.enable(); else await launcher.disable();
   return launcher.isEnabled();
 });
 ipcMain.handle('getUnattended', async () => {
-  const launcher = new AutoLaunch({ name: 'Remotely', path: process.execPath });
+  const launcher = new AutoLaunch({ name: 'RemoteConnectMe', path: process.execPath });
   return launcher.isEnabled();
 });
 
