@@ -1,3 +1,4 @@
+# cache-bust: next@15.3.3
 FROM node:20-alpine AS base
 
 # Install dependencies

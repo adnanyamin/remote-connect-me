@@ -2,9 +2,6 @@
 module.exports = {
   reactStrictMode: true,
   output: 'standalone',
-  experimental: {
-    cpus: 1,
-  },
   webpack(config) {
     // Optional runtime dependencies — not installed, skip bundling.
     config.externals = [
