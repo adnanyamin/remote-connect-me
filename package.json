@@ -19,7 +19,5 @@
     "sbom": "bash scripts/sbom.sh",
     "test:signaling": "node signaling/test/reject.test.js"
   },
-  "dependencies": {
-    "@prisma/client": "^7.8.0"
-  }
+  "dependencies": {}
 }
