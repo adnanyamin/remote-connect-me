@@ -1,10 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/router';
 import Head from 'next/head';
-import getConfig from 'next/config';
-
-const { publicRuntimeConfig } = getConfig();
-const SIGNALING_URL = publicRuntimeConfig.signalingUrl;
+const SIGNALING_URL = process.env.NEXT_PUBLIC_SIGNALING_URL || 'ws://localhost:8787';
 
 /**
  * Fetches short-lived TURN credentials from /api/turn-credentials.
