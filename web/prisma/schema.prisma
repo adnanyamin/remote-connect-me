@@ -9,7 +9,7 @@ datasource db {
   //     3. Run: npx prisma migrate deploy
   //
   // Keep "sqlite" for local dev (DATABASE_URL="file:./dev.db").
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
