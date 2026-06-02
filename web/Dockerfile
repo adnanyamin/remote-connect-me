@@ -36,4 +36,6 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-CMD ["node", "server.js"]
+# Copy prisma CLI so we can run migrations at startup
+COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
+CMD ["sh", "-c", "npx prisma migrate deploy && node server.js"]
