@@ -5,7 +5,7 @@
   "description": "RemoteConnectMe Electron host client",
   "main": "main.js",
   "engines": {
-    "node": ">=20 <21",
+    "node": ">=20",
     "npm": ">=10"
   },
   "scripts": {
