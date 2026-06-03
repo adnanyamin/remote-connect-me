@@ -30,6 +30,7 @@ export default function Dashboard() {
     const meR = await fetch('/api/auth/me');
     if (!meR.ok) { router.replace('/login'); return; }
     const meData = await meR.json();
+    if (!meData.emailVerified) { router.replace('/verify-email?pending=1'); return; }
     setMe({ email: meData.email, activeOrg: meData.activeOrg });
 
     // Org list + device list in parallel; the switcher uses the org list.
