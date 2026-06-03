@@ -90,8 +90,9 @@ export default function Login() {
             <input className="input" type="password" placeholder="Password" required value={password} onChange={(e) => setPassword(e.target.value)} />
             {err && <div className="text-red-300 text-sm">{err}</div>}
             <button className="btn-primary w-full" disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</button>
-            <div className="text-sm text-white/60 text-center">
-              New here? <Link href="/signup">Create an account</Link>
+            <div className="text-sm text-white/60 text-center space-y-1">
+              <div><Link href="/forgot-password" className="hover:text-white">Forgot password?</Link></div>
+              <div>New here? <Link href="/signup">Create an account</Link></div>
             </div>
           </form>
         )}
