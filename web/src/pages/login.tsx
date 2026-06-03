@@ -3,7 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Head from 'next/head';
 
-type Stage = 'creds' | 'mfa';
+type Stage = 'creds' | 'email_otp' | 'mfa';
 
 export default function Login() {
   const router = useRouter();
@@ -11,7 +11,9 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [code, setCode] = useState('');
+  const [emailOtpToken, setEmailOtpToken] = useState<string | null>(null);
   const [mfaToken, setMfaToken] = useState<string | null>(null);
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -26,8 +28,32 @@ export default function Login() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Login failed');
+      if (data.email_otp_required) {
+        setEmailOtpToken(data.emailOtpToken);
+        setMfaRequired(!!data.mfa_required);
+        setStage('email_otp');
+      } else {
+        router.push('/dashboard');
+      }
+    } catch (e: any) { setErr(e.message); }
+    finally { setBusy(false); }
+  }
+
+  async function submitEmailOtp(e: React.FormEvent) {
+    e.preventDefault();
+    if (!emailOtpToken) return;
+    setErr(null); setBusy(true);
+    try {
+      const r = await fetch('/api/auth/email-otp/verify', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ emailOtpToken, code }),
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Invalid code');
       if (data.mfa_required) {
         setMfaToken(data.mfaToken);
+        setCode('');
         setStage('mfa');
       } else {
         router.push('/dashboard');
@@ -57,7 +83,7 @@ export default function Login() {
     <>
       <Head><title>Sign in · RemoteConnectMe</title></Head>
       <div className="min-h-screen grid place-items-center px-6">
-        {stage === 'creds' ? (
+        {stage === 'creds' && (
           <form onSubmit={submitCreds} className="card w-full max-w-md space-y-4">
             <h1 className="text-2xl font-semibold">Sign in</h1>
             <input className="input" type="email" placeholder="you@example.com" required value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -68,9 +94,42 @@ export default function Login() {
               New here? <Link href="/signup">Create an account</Link>
             </div>
           </form>
-        ) : (
+        )}
+
+        {stage === 'email_otp' && (
+          <form onSubmit={submitEmailOtp} className="card w-full max-w-md space-y-4">
+            <h1 className="text-2xl font-semibold">Check your email</h1>
+            <p className="text-sm text-white/70">
+              We sent a 6-digit code to <strong>{email}</strong>. Enter it below to continue.
+            </p>
+            <input
+              className="input tracking-[0.3em] text-center text-lg"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              autoFocus
+              placeholder="123456"
+              maxLength={6}
+              required
+              value={code}
+              onChange={(e) => setCode(e.target.value.replace(/\D/g, ''))}
+            />
+            {err && <div className="text-red-300 text-sm">{err}</div>}
+            <button className="btn-primary w-full" disabled={busy || code.length < 6}>
+              {busy ? 'Verifying…' : 'Verify'}
+            </button>
+            <button
+              type="button"
+              className="text-sm text-white/60 hover:text-white"
+              onClick={() => { setStage('creds'); setCode(''); setEmailOtpToken(null); setErr(null); }}
+            >
+              ← Back to password
+            </button>
+          </form>
+        )}
+
+        {stage === 'mfa' && (
           <form onSubmit={submitMfa} className="card w-full max-w-md space-y-4">
-            <h1 className="text-2xl font-semibold">Two-factor code</h1>
+            <h1 className="text-2xl font-semibold">Authenticator code</h1>
             <p className="text-sm text-white/70">
               Enter the 6-digit code from your authenticator app, or one of your recovery codes.
             </p>
@@ -91,7 +150,7 @@ export default function Login() {
             <button
               type="button"
               className="text-sm text-white/60 hover:text-white"
-              onClick={() => { setStage('creds'); setCode(''); setMfaToken(null); }}
+              onClick={() => { setStage('creds'); setCode(''); setMfaToken(null); setErr(null); }}
             >
               ← Back to password
             </button>

@@ -3,7 +3,10 @@ import { z } from 'zod';
 import { prisma } from '@/lib/db';
 import {
   verifyPassword, signSessionToken, setSessionCookie, signMfaPendingToken,
+  signEmailOtpPendingToken,
 } from '@/lib/auth';
+import { generateEmailToken } from '@/lib/email';
+import { sendEmail } from '@/lib/email';
 import { limit, BUCKETS, clientIp } from '@/lib/ratelimit';
 import { writeAudit } from '@/lib/audit';
 
@@ -39,23 +42,42 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(401).json({ error: 'invalid email or password' });
   }
 
-  // If MFA is enrolled, do NOT issue a session — return a short-lived
-  // mfa-pending token instead. The client then POSTs it + the TOTP code
-  // to /api/auth/mfa/verify to get the real cookie.
-  if (user.mfaEnabledAt) {
-    await writeAudit({ action: 'auth.mfa.required', userId: user.id, req });
-    return res.status(200).json({
-      mfa_required: true,
-      mfaToken: signMfaPendingToken(user.id),
+  // Always require email OTP before issuing a session.
+  // Generate a 6-digit numeric code, store its hash, and email it.
+  const { plaintext, hash } = generateEmailToken();
+  const sixDigit = (parseInt(plaintext.slice(0, 8), 36) % 900000 + 100000).toString();
+  const sixDigitHash = require('crypto').createHash('sha256').update(sixDigit).digest('hex');
+
+  const expires = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+  await prisma.emailToken.create({
+    data: {
+      userId: user.id,
+      tokenHash: sixDigitHash,
+      purpose: 'login_otp',
+      expiresAt: expires,
+    },
+  });
+
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Your RemoteConnectMe login code',
+      text: `Your login verification code is: ${sixDigit}\n\nThis code expires in 10 minutes. If you did not attempt to log in, please ignore this email.`,
     });
+  } catch (e) {
+    console.error('[login] email OTP send failed', e);
   }
 
-  setSessionCookie(res, signSessionToken(user.id));
-  await writeAudit({ action: 'auth.login.success', userId: user.id, req });
+  // If MFA is also enrolled, chain: email OTP first, then TOTP.
+  if (user.mfaEnabledAt) {
+    await writeAudit({ action: 'auth.mfa.required', userId: user.id, req });
+  }
+
+  const emailOtpToken = signEmailOtpPendingToken(user.id);
+  await writeAudit({ action: 'auth.email_otp.sent', userId: user.id, req });
   return res.status(200).json({
-    id: user.id,
-    email: user.email,
-    emailVerified: !!user.emailVerifiedAt,
-    mfaEnabled: false,
+    email_otp_required: true,
+    emailOtpToken,
+    mfa_required: !!user.mfaEnabledAt,
   });
 }

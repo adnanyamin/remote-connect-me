@@ -29,6 +29,7 @@ const SIGNALING_SECRET = requireSecret('SIGNALING_SECRET');
 const SESSION_COOKIE = 'remotely_session';
 const SESSION_TTL_S = 60 * 60 * 24 * 14; // 14 days
 const MFA_PENDING_TTL_S = 60 * 5;        // 5 minutes between password and TOTP
+const EMAIL_OTP_PENDING_TTL_S = 60 * 10; // 10 minutes to enter email OTP
 
 export async function hashPassword(plain: string) {
   return bcrypt.hash(plain, 12);
@@ -64,6 +65,22 @@ export function verifyMfaPendingToken(token: string): { sub: string } | null {
   try {
     const payload = jwt.verify(token, JWT_SECRET) as { sub: string; type: string };
     if (payload.type !== 'mfa-pending') return null;
+    return { sub: payload.sub };
+  } catch { return null; }
+}
+
+/**
+ * Short-lived "email OTP pending" token. Issued after correct password;
+ * consumed by /api/auth/email-otp/verify in exchange for a real session.
+ */
+export function signEmailOtpPendingToken(userId: string) {
+  return jwt.sign({ sub: userId, type: 'email-otp-pending' }, JWT_SECRET, { expiresIn: EMAIL_OTP_PENDING_TTL_S });
+}
+
+export function verifyEmailOtpPendingToken(token: string): { sub: string } | null {
+  try {
+    const payload = jwt.verify(token, JWT_SECRET) as { sub: string; type: string };
+    if (payload.type !== 'email-otp-pending') return null;
     return { sub: payload.sub };
   } catch { return null; }
 }
