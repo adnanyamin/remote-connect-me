@@ -2,56 +2,41 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Pair Remotely</title>
+  <title>Pair RemoteConnectMe</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #e7ecf6; margin: 0; padding: 32px; }
-    h1 { margin-top: 0; }
-    p { color: rgba(231,236,246,0.7); }
-    label { display: block; font-size: 14px; margin-top: 16px; }
-    input { font-family: ui-monospace, Consolas, monospace; font-size: 22px; letter-spacing: 0.4em; text-align: center;
-            width: 100%; padding: 12px; margin-top: 8px; border-radius: 8px;
-            background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); color: white; box-sizing: border-box; }
-    .name { font-size: 14px; letter-spacing: 0; text-align: left; }
-    button { margin-top: 20px; width: 100%; padding: 12px; border-radius: 8px; border: 0; background: #2a6df4; color: white; font-weight: 600; font-size: 15px; cursor: pointer; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #e7ecf6; margin: 0; padding: 40px 32px; }
+    h1 { margin-top: 0; font-size: 22px; }
+    p { color: rgba(231,236,246,0.7); line-height: 1.6; }
+    button { margin-top: 24px; width: 100%; padding: 14px; border-radius: 8px; border: 0; background: #2a6df4; color: white; font-weight: 600; font-size: 15px; cursor: pointer; }
     button:disabled { opacity: 0.5; cursor: default; }
     .err { color: #fca5a5; font-size: 14px; margin-top: 12px; }
-    .ok  { color: #86efac; font-size: 14px; margin-top: 12px; }
+    .waiting { color: rgba(231,236,246,0.6); font-size: 14px; margin-top: 16px; text-align: center; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
   <h1>Pair this PC</h1>
-  <p>On <a href="#" id="dashLink">your dashboard</a>, click <b>Add device</b> and copy the 8-character pairing code. Paste it below.</p>
+  <p>Sign in to your RemoteConnectMe account in the browser window that opens. Once signed in, click <b>Pair this device</b> to link this PC to your account.</p>
 
-  <label>Pairing code
-    <input id="code" maxlength="8" autocomplete="off" autocapitalize="characters" placeholder="XXXXXXXX">
-  </label>
-  <label>Name this PC
-    <input id="name" class="name" placeholder="My desktop" />
-  </label>
-
-  <button id="go">Pair</button>
+  <button id="go">Sign in to pair this PC</button>
   <div id="msg"></div>
 
   <script>
-    (async () => {
-      const cfg = await window.remotely.config();
-      document.getElementById('dashLink').href = cfg.apiBase + '/dashboard';
-      document.getElementById('dashLink').onclick = (e) => { e.preventDefault(); require('electron').shell.openExternal(cfg.apiBase + '/dashboard'); };
-    })();
-    const code = document.getElementById('code');
-    const name = document.getElementById('name');
-    const go   = document.getElementById('go');
-    const msg  = document.getElementById('msg');
-    code.addEventListener('input', () => code.value = code.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8));
+    const go  = document.getElementById('go');
+    const msg = document.getElementById('msg');
+
     go.addEventListener('click', async () => {
-      msg.textContent = ''; go.disabled = true;
+      go.disabled = true;
+      msg.innerHTML = '<div class="waiting"><span class="spinner"></span>Waiting for browser sign-in…</div>';
       try {
-        const res = await window.remotely.pair(code.value, name.value);
-        msg.className = 'ok'; msg.textContent = `Paired to ${res.accountEmail}. Starting up…`;
-        // main.js takes care of opening the status window and closing this one.
+        await window.remotely.browserPair();
+        // main.js will close this window and open the status window on success
       } catch (e) {
-        msg.className = 'err'; msg.textContent = e.message || String(e);
-      } finally { go.disabled = false; }
+        msg.className = 'err';
+        msg.textContent = e.message || String(e);
+        go.disabled = false;
+      }
     });
   </script>
 </body>

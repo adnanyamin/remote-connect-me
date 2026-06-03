@@ -4,6 +4,7 @@ contextBridge.exposeInMainWorld('remotely', {
   // ---- Config + pairing ----
   config: () => ipcRenderer.invoke('config'),
   pair: (code, machineName) => ipcRenderer.invoke('pair', code, machineName),
+  browserPair: () => ipcRenderer.invoke('browserPair'),
   isPaired: () => ipcRenderer.invoke('isPaired'),
 
   // ---- Auth tokens ----

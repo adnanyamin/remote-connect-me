@@ -21,9 +21,7 @@ export default function Dashboard() {
   const [orgs, setOrgs] = useState<ActiveOrg[]>([]);
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
-  const [adding, setAdding] = useState(false);
-  const [pair, setPair] = useState<{ deviceId: string; pairCode: string; expiresAt: string } | null>(null);
-  const [newName, setNewName] = useState('My PC');
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -58,23 +56,6 @@ export default function Dashboard() {
   }
 
   useEffect(() => { load(); }, []); // eslint-disable-line
-
-  async function addDevice(e: React.FormEvent) {
-    e.preventDefault();
-    setAdding(true);
-    try {
-      const r = await fetch('/api/devices', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: newName }),
-      });
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error);
-      setPair({ deviceId: data.device.id, pairCode: data.pairCode, expiresAt: data.expiresAt });
-      load();
-    } catch (e: any) { alert(e.message); }
-    finally { setAdding(false); }
-  }
 
   async function removeDevice(id: string) {
     if (!confirm('Remove this device? You will need to pair it again.')) return;
@@ -145,7 +126,7 @@ export default function Dashboard() {
               )}
             </div>
             {me?.activeOrg && (me.activeOrg.role === 'owner' || me.activeOrg.role === 'admin') && (
-              <button className="btn-primary" onClick={() => { setPair(null); setNewName('My PC'); (document.getElementById('add-form') as HTMLDialogElement)?.showModal(); }}>+ Add device</button>
+              <button className="btn-primary" onClick={() => setShowAddDialog(true)}>+ Add device</button>
             )}
           </section>
 
@@ -206,31 +187,30 @@ export default function Dashboard() {
           )}
         </main>
 
-        <dialog id="add-form" className="rounded-xl bg-ink text-white p-0 backdrop:bg-black/60">
-          <form onSubmit={addDevice} className="p-6 w-[28rem] max-w-full space-y-4">
-            <h2 className="text-xl font-semibold">Add device</h2>
-            {!pair ? (
-              <>
-                <input autoFocus className="input" value={newName} onChange={e => setNewName(e.target.value)} placeholder="What is this PC called?" required />
-                <div className="flex justify-end gap-2">
-                  <button type="button" className="btn-ghost" onClick={() => (document.getElementById('add-form') as HTMLDialogElement).close()}>Cancel</button>
-                  <button className="btn-primary" disabled={adding}>{adding ? 'Generating…' : 'Generate code'}</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <p className="text-white/70 text-sm">In the RemoteConnectMe Windows client, paste this code to finish pairing:</p>
-                <div className="text-center text-3xl tracking-[0.4em] font-mono py-6 rounded-md bg-white/5 select-all">
-                  {pair.pairCode}
-                </div>
-                <p className="text-xs text-white/40">Expires {new Date(pair.expiresAt).toLocaleTimeString()}.</p>
-                <div className="flex justify-end gap-2">
-                  <button type="button" className="btn-primary" onClick={() => { (document.getElementById('add-form') as HTMLDialogElement).close(); setPair(null); }}>Done</button>
-                </div>
-              </>
-            )}
-          </form>
-        </dialog>
+        {showAddDialog && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center backdrop:bg-black/60 bg-black/60">
+            <div className="rounded-xl bg-[#0b1020] border border-white/10 text-white p-6 w-[28rem] max-w-full space-y-4 shadow-2xl">
+              <h2 className="text-xl font-semibold">Add device</h2>
+              <p className="text-white/70 text-sm">
+                Download and run the RemoteConnectMe client on the PC you want to add.
+                It will open a browser window where you&apos;ll name the device and confirm pairing — no codes needed.
+              </p>
+              <a
+                href="https://github.com/REPLACE_ME_GITHUB_OWNER/REPLACE_ME_GITHUB_REPO/releases/latest/download/RemoteConnectMe-Setup.exe"
+                className="btn-primary w-full text-center block"
+                download
+              >
+                ↓ Download RemoteConnectMe for Windows
+              </a>
+              <p className="text-xs text-white/40 text-center">
+                After installing, click &quot;Sign in to pair this PC&quot; in the app.
+              </p>
+              <div className="flex justify-end">
+                <button className="btn-ghost" onClick={() => setShowAddDialog(false)}>Close</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

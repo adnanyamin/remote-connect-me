@@ -67,8 +67,8 @@ try {
 const SERVICE = 'RemoteConnectMe';
 const ACCOUNT = 'device-key';
 const ACCOUNT_UNATTENDED_PIN = 'unattended-pin-hash';
-const DEFAULT_API_BASE = 'http://localhost:3000';
-const DEFAULT_SIGNALING_URL = 'ws://localhost:8787';
+const DEFAULT_API_BASE = 'https://remoteconnectme-web.fly.dev';
+const DEFAULT_SIGNALING_URL = 'wss://remotely-signal.fly.dev';
 
 const config = {
   apiBase: process.env.REMOTELY_API_BASE || DEFAULT_API_BASE,
@@ -166,6 +166,71 @@ function displayForSourceId(sourceId) {
 // ---- IPC ----
 
 ipcMain.handle('config', () => config);
+
+/**
+ * Browser-based pairing.
+ * 1. Spin up a one-shot HTTP server on a random localhost port.
+ * 2. Open the web app /pair page with the callback URL + machine name.
+ * 3. The web app creates the device, generates a deviceKey, and redirects
+ *    to http://127.0.0.1:{port}?deviceKey=...&deviceId=...
+ * 4. We receive the credentials, save to keychain, open the status window.
+ */
+ipcMain.handle('browserPair', async () => {
+  const http = require('http');
+  return new Promise((resolve, reject) => {
+    let server;
+    const TIMEOUT_MS = 5 * 60 * 1000;
+    const timeout = setTimeout(() => {
+      try { server?.close(); } catch {}
+      reject(new Error('Pairing timed out after 5 minutes. Please try again.'));
+    }, TIMEOUT_MS);
+
+    server = http.createServer((req, res) => {
+      clearTimeout(timeout);
+      try { server.close(); } catch {}
+
+      const url = new URL(req.url, 'http://localhost');
+      const deviceKey = url.searchParams.get('deviceKey');
+      const errorMsg = url.searchParams.get('error');
+
+      // Send a page the browser tab can close itself
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`<!doctype html><html><head><title>Paired!</title></head><body>
+        <p style="font-family:system-ui;text-align:center;margin-top:80px;font-size:18px">
+          ✓ Device paired — you can close this tab.
+        </p>
+        <script>setTimeout(()=>window.close(),1500)</script>
+      </body></html>`);
+
+      if (errorMsg) return reject(new Error(decodeURIComponent(errorMsg)));
+      if (!deviceKey) return reject(new Error('No device key received from browser.'));
+
+      saveKey(deviceKey)
+        .then(async () => {
+          setTimeout(async () => {
+            if (pairWin && !pairWin.isDestroyed()) pairWin.close();
+            await showStatusWindow();
+            await showSessionWindow();
+          }, 200);
+          resolve({ ok: true });
+        })
+        .catch(reject);
+    });
+
+    server.on('error', (e) => {
+      clearTimeout(timeout);
+      reject(new Error(`Local server error: ${e.message}`));
+    });
+
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      const callbackUrl = encodeURIComponent(`http://127.0.0.1:${port}`);
+      const name = encodeURIComponent(os.hostname());
+      const url = `${config.apiBase}/pair?callback=${callbackUrl}&name=${name}&platform=${encodeURIComponent(process.platform)}`;
+      shell.openExternal(url);
+    });
+  });
+});
 
 ipcMain.handle('pair', async (_e, code, machineName) => {
   const r = await fetch(config.apiBase + '/api/client/pair', {

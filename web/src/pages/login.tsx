@@ -7,6 +7,7 @@ type Stage = 'creds' | 'email_otp' | 'mfa';
 
 export default function Login() {
   const router = useRouter();
+  const returnTo = typeof router.query.returnTo === 'string' ? router.query.returnTo : '/dashboard';
   const [stage, setStage] = useState<Stage>('creds');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -33,7 +34,7 @@ export default function Login() {
         setMfaRequired(!!data.mfa_required);
         setStage('email_otp');
       } else {
-        router.push('/dashboard');
+        router.push(returnTo);
       }
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
@@ -56,7 +57,7 @@ export default function Login() {
         setCode('');
         setStage('mfa');
       } else {
-        router.push('/dashboard');
+        router.push(returnTo);
       }
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
@@ -74,7 +75,7 @@ export default function Login() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Code rejected');
-      router.push('/dashboard');
+      router.push(returnTo);
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   }
