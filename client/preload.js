@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('remotely', {
   // ---- Session approval + disconnect ----
   requestSessionApproval: (info) => ipcRenderer.invoke('requestSessionApproval', info),
   disconnect: () => ipcRenderer.invoke('disconnect'),
+  onDisconnect: (cb) => ipcRenderer.on('disconnect', cb),
 
   // ---- Unattended access ----
   setUnattended: (b) => ipcRenderer.invoke('setUnattended', b),

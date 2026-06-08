@@ -310,8 +310,7 @@ function scheduleReconnect() {
 }
 
 // Disconnect command from the host UI
-const { ipcRenderer } = require('electron');
-ipcRenderer.on('disconnect', () => {
+window.remotely.onDisconnect(() => {
   log('Disconnected by local user.');
   if (pc) { try { pc.close(); } catch {} pc = null; videoSender = null; }
   if (ws) { try { ws.close(); } catch {} ws = null; }
