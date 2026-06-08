@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "RemoteConnectMe Electron host client",
+  "author": "Adnan Yamin <adnanyamin@gmail.com>",
   "main": "main.js",
   "engines": {
     "node": ">=20",
