@@ -1,5 +1,5 @@
 {
-  "name": "@remoteconnectme/client",
+  "name": "remoteconnectme",
   "version": "0.1.0",
   "private": true,
   "description": "RemoteConnectMe Electron host client",
