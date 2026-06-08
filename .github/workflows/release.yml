@@ -53,11 +53,9 @@ jobs:
       - name: Build + package client
         shell: bash
         env:
-          # Disable ALL certificate auto-discovery. Builds will be unsigned
+          # Disable certificate auto-discovery. Builds will be unsigned
           # until CSC_LINK / APPLE_ID secrets are added to the repo.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
-          WIN_CSC_LINK: ""
-          WIN_CSC_KEY_PASSWORD: ""
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm --workspace client run dist:${{ matrix.platform }} -- --publish never
 
