@@ -196,7 +196,7 @@ export default function Dashboard() {
                 It will open a browser window where you&apos;ll name the device and confirm pairing — no codes needed.
               </p>
               <a
-                href="https://github.com/REPLACE_ME_GITHUB_OWNER/REPLACE_ME_GITHUB_REPO/releases/latest/download/RemoteConnectMe-Setup.exe"
+                href="https://github.com/adnanyamin/remote-connect-me/releases/latest/download/RemoteConnectMe-Setup.exe"
                 className="btn-primary w-full text-center block"
                 download
               >
