@@ -309,4 +309,14 @@ function scheduleReconnect() {
   setTimeout(() => { backoff = Math.min(backoff * 2, 30000); connectSignaling(); }, backoff);
 }
 
+// Disconnect command from the host UI
+const { ipcRenderer } = require('electron');
+ipcRenderer.on('disconnect', () => {
+  log('Disconnected by local user.');
+  if (pc) { try { pc.close(); } catch {} pc = null; videoSender = null; }
+  if (ws) { try { ws.close(); } catch {} ws = null; }
+  setState('connected'); // back to "waiting for viewer" state
+  scheduleReconnect();
+});
+
 connectSignaling();

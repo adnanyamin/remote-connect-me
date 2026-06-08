@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>Remotely</title>
+  <title>RemoteConnectMe</title>
   <style>
     :root { color-scheme: dark; }
     body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #e7ecf6; margin: 0; padding: 24px; }
@@ -36,11 +36,13 @@
     button.primary { background: #2a6df4; border-color: #2a6df4; }
     button.primary:hover { background: #3a7df4; }
     .footer { margin-top: 18px; display: flex; gap: 8px; }
+    button.danger { background: #7f1d1d; border-color: #ef4444; color: #fca5a5; }
+    button.danger:hover { background: #991b1b; }
     .small { font-size: 11px; color: rgba(231,236,246,0.5); }
   </style>
 </head>
 <body>
-  <h1>Remotely</h1>
+  <h1>RemoteConnectMe</h1>
   <div class="row"><span id="dot" class="dot"></span><span id="state">Connecting…</span></div>
 
   <h3>Unattended access</h3>
@@ -59,6 +61,7 @@
   <pre id="log"></pre>
 
   <div class="footer">
+    <button id="disconnect" class="danger" style="display:none">Disconnect viewer</button>
     <button id="checkUpdate">Check for updates</button>
     <button id="hide">Hide to tray</button>
   </div>
@@ -70,14 +73,23 @@
     const pinStatus = document.getElementById('pinStatus');
 
     function append(line) { log.textContent += '\n' + line; log.scrollTop = log.scrollHeight; }
+    const disconnectBtn = document.getElementById('disconnect');
+
     window.remotely.onLog((line) => {
       append(line);
       if (line.startsWith('STATE: ')) {
         const s = line.slice(7);
         state.textContent = s;
         dot.className = 'dot ' + (s === 'connected' || s === 'streaming' ? 'online' : s.startsWith('error') ? 'error' : '');
+        disconnectBtn.style.display = s === 'streaming' ? 'inline-block' : 'none';
       }
     });
+
+    disconnectBtn.onclick = async () => {
+      disconnectBtn.disabled = true;
+      await window.remotely.disconnect();
+      disconnectBtn.disabled = false;
+    };
 
     document.getElementById('hide').onclick = () => window.close();
 

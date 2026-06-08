@@ -207,6 +207,11 @@ ipcMain.handle('browserPair', async () => {
 
       saveKey(deviceKey)
         .then(async () => {
+          // Enable auto-launch on first pair so the app starts with Windows by default
+          try {
+            const launcher = new AutoLaunch({ name: 'RemoteConnectMe', path: process.execPath });
+            await launcher.enable();
+          } catch (e) { console.warn('[auto-launch] enable on pair failed:', e.message); }
           setTimeout(async () => {
             if (pairWin && !pairWin.isDestroyed()) pairWin.close();
             await showStatusWindow();
@@ -429,6 +434,15 @@ ipcMain.handle('inject', async (_e, evt) => {
     console.warn('input.handle failed:', e.message);
     if (Sentry) Sentry.captureException(e);
   }
+});
+
+// ---- Disconnect active session ----
+
+ipcMain.handle('disconnect', () => {
+  if (sessionWin && !sessionWin.isDestroyed()) {
+    sessionWin.webContents.send('disconnect');
+  }
+  return { ok: true };
 });
 
 // ---- Logging ----

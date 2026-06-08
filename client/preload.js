@@ -11,8 +11,9 @@ contextBridge.exposeInMainWorld('remotely', {
   getConnectToken: () => ipcRenderer.invoke('getConnectToken'),
   getTurnCredentials: () => ipcRenderer.invoke('getTurnCredentials'),
 
-  // ---- Session approval (attended mode) ----
+  // ---- Session approval + disconnect ----
   requestSessionApproval: (info) => ipcRenderer.invoke('requestSessionApproval', info),
+  disconnect: () => ipcRenderer.invoke('disconnect'),
 
   // ---- Unattended access ----
   setUnattended: (b) => ipcRenderer.invoke('setUnattended', b),
