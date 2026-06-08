@@ -38,6 +38,7 @@
   "build": {
     "appId": "com.remotely.client",
     "productName": "RemoteConnectMe",
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
     "files": ["main.js", "preload.js", "ui/**", "lib/**"],
     "afterSign": "build/notarize.js",
     "publish": [
