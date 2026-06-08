@@ -1,30 +1,16 @@
 name: release
 
-# Build, sign, SBOM, and publish the Electron client for all three platforms
-# when a version tag is pushed (e.g. v0.2.0).
-#
-# This is an npm-workspaces monorepo: `npm ci` runs at the repo root and
-# installs the web/signaling/client workspaces from the single root lockfile.
-# The client is then built from its workspace.
-#
-# Signing is "best-effort, secret-gated": real code-signing + notarization only
-# run when the relevant secrets are configured. Without them the build still
-# succeeds (unsigned), and every artifact is ALSO signed with Sigstore cosign
-# keyless OIDC for verifiable provenance regardless of cert status.
-#
-# Secrets it will use if present:
-#   WINDOWS:  CSC_LINK (base64 .pfx)        CSC_KEY_PASSWORD
-#   MACOS:    CSC_LINK / CSC_KEY_PASSWORD   APPLE_ID  APPLE_APP_SPECIFIC_PASSWORD  APPLE_TEAM_ID
-#   LINUX:    (none required; GPG deb/rpm signing optional, see docs/DEPLOY.md)
-
 on:
   push:
     tags:
       - 'v*'
 
 permissions:
-  contents: write   # create the GitHub Release + upload assets
+  contents: write
   id-token: write   # cosign keyless signing via OIDC
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   build:
@@ -48,7 +34,6 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      # Deterministic timestamps for reproducible-ish builds.
       - name: Compute SOURCE_DATE_EPOCH
         shell: bash
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
@@ -68,13 +53,12 @@ jobs:
       - name: Build + package client
         shell: bash
         env:
-          # Real signing material — empty when the secret is unset, which makes
-          # electron-builder skip signing rather than fail.
+          # Code-signing: only active when secrets are configured.
+          # CSC_IDENTITY_AUTO_DISCOVERY=false prevents electron-builder from
+          # searching the macOS keychain and failing when no cert is present.
           CSC_LINK: ${{ secrets.CSC_LINK }}
           CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          # Don't let electron-builder hunt the keychain for an identity when we
-          # haven't supplied one (would error on macOS runners).
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK != '' }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
@@ -84,20 +68,18 @@ jobs:
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
 
-      - name: Sign artifacts + SBOM with cosign (keyless)
+      - name: Sign artifacts with cosign (keyless)
         shell: bash
         run: |
           shopt -s nullglob
           files=( client/dist/*.exe client/dist/*.dmg client/dist/*.zip client/dist/*.AppImage client/dist/*.deb client/dist/*.rpm "sbom.${{ matrix.platform }}.cdx.json" )
           for f in "${files[@]}"; do
-            echo "cosign sign-blob $f"
             cosign sign-blob --yes --bundle "${f}.sigstore" "$f"
           done
 
       - name: Publish to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          # Appends to the release for this tag; each matrix job adds its files.
           files: |
             client/dist/*.exe
             client/dist/*.dmg
