@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/internal/cron/purge-recordings",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/internal/cron/seal-audit",
+      "schedule": "10 3 * * *"
+    }
+  ]
+}

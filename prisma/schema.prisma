@@ -1,0 +1,234 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  // ⚠️  BEFORE DEPLOYING TO PRODUCTION:
+  //     1. Change provider to "postgresql"
+  //     2. Set DATABASE_URL="postgresql://..." in your host environment
+  //     3. Run: npx prisma migrate deploy
+  //
+  // Keep "sqlite" for local dev (DATABASE_URL="file:./dev.db").
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String       @id @default(cuid())
+  email            String       @unique
+  passwordHash     String
+  emailVerifiedAt  DateTime?
+  // ---- MFA (TOTP) ----
+  // Base32-encoded TOTP secret. Set on enrollment-start; mfaEnabledAt is set
+  // only after a verifying code is accepted.
+  mfaSecret        String?
+  mfaEnabledAt     DateTime?
+  // JSON array of { hash: sha256(code), usedAt: ISO date | null }. Hashes only —
+  // we never store the plaintext recovery codes after handing them out once.
+  mfaRecoveryCodes String?
+  createdAt        DateTime     @default(now())
+  // Devices this user paired in. Org-level access is via Membership; this is
+  // kept purely for provenance ("who created this device row?").
+  devices          Device[]
+  emailTokens      EmailToken[]
+  memberships      Membership[]
+  invitationsSent  Invitation[] @relation("InvitationsSent")
+}
+
+// A tenant. Every user gets a `personal=true` org at signup so the same code
+// paths handle solo and team users uniformly. Devices and audit rows are scoped
+// to an org, not directly to a user.
+model Organization {
+  id          String       @id @default(cuid())
+  name        String
+  slug        String       @unique
+  // Auto-created at signup. Currently UI-only; not enforced anywhere.
+  personal    Boolean      @default(false)
+  // Session recording policy: "off" (never), "optional" (technician toggles
+  // per session), "required" (every session recorded automatically).
+  recordingPolicy        String   @default("off")
+  // How long completed recordings are retained before a cleanup job purges
+  // them. Stored on each recording as expiresAt at finalize time.
+  recordingRetentionDays Int      @default(90)
+  createdAt   DateTime     @default(now())
+  members     Membership[]
+  devices     Device[]
+  invitations Invitation[]
+  recordings  SessionRecording[]
+}
+
+// One recorded remote-control session. The media itself lives in object
+// storage (see lib/storage.ts), encrypted at rest with a per-recording data
+// key. The data key is wrapped under the deployment master key (lib/
+// recordingCrypto.ts) and stored here as `wrappedKey` — envelope encryption,
+// the same pattern KMS uses. We never store an unwrapped key.
+model SessionRecording {
+  id           String       @id @default(cuid())
+  orgId        String
+  org          Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  // Not FKs: a recording outlives the device/user it referenced, for audit.
+  deviceId     String
+  viewerUserId String?
+  // "recording" | "completed" | "aborted"
+  status       String       @default("recording")
+  startedAt    DateTime     @default(now())
+  endedAt      DateTime?
+  bytes        Int          @default(0)
+  chunkCount   Int          @default(0)
+  durationMs   Int          @default(0)
+  // Object-storage key prefix; chunks live at <storageKey>/<seq>.bin.
+  storageKey   String
+  // Envelope-encrypted data key: base64("iv:tag:ciphertext"). Null until the
+  // first chunk write generates + persists the key.
+  wrappedKey   String?
+  // Set at finalize from the org's retention policy.
+  expiresAt    DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([orgId, createdAt])
+  @@index([deviceId, createdAt])
+}
+
+// Pending team invitations. An admin+ creates one with an email + role; the
+// invitee gets a magic-link email with the plaintext token, and POSTing the
+// token (while signed in with the matching email) creates a Membership.
+model Invitation {
+  id              String       @id @default(cuid())
+  orgId           String
+  org             Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  // Lowercased target email. Not a FK to User — invitees may not have signed up yet.
+  email           String
+  // Same role values as Membership.role. Cannot be "owner" — ownership transfer
+  // is a separate action, not part of invitation flow.
+  role            String
+  // SHA-256(plaintext token). Plaintext is emailed, never stored.
+  tokenHash       String       @unique
+  expiresAt       DateTime
+  usedAt          DateTime?
+  // Whoever actually accepted the invite. Stored for audit/forensics even if
+  // it doesn't match `email` (in practice we require a match, but legacy rows
+  // may differ once we relax that rule).
+  usedByUserId    String?
+  // Audit: which member sent the invite. SetNull so revoking the inviter
+  // doesn't blow away their pending invites.
+  invitedByUserId String?
+  invitedBy       User?        @relation("InvitationsSent", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+
+  @@index([orgId, usedAt])
+  @@index([email, usedAt])
+}
+
+// Joins User <-> Organization with a role. A user can belong to many orgs.
+model Membership {
+  id        String       @id @default(cuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  // owner | admin | technician | viewer  (see lib/rbac.ts)
+  role      String
+  createdAt DateTime     @default(now())
+
+  @@unique([userId, orgId])
+  @@index([orgId, role])
+}
+
+model Device {
+  id            String   @id @default(cuid())
+  // The user who initiated the pair flow. Kept for provenance only; access is
+  // gated by Org membership + role, never by this column.
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Tenant scope. Every device belongs to exactly one org. Members of that org
+  // with the right role (technician+) can connect to it.
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  name          String
+  platform      String   @default("windows")
+  // Long-lived secret stored on the client. Hashed on the server.
+  deviceKeyHash String
+  // When true, the host shows a native confirmation dialog every time a viewer
+  // connects and refuses to start the WebRTC stream until the local user
+  // clicks Accept. Default is true — opt out for unattended/server use cases.
+  requireApproval Boolean @default(true)
+  createdAt     DateTime @default(now())
+  lastSeenAt    DateTime?
+  pairCode      PairCode?
+
+  @@index([orgId])
+}
+
+// Single-use, short-lived code shown in the browser when adding a device.
+// The Electron client exchanges it for a real device key.
+model PairCode {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  deviceId  String   @unique
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+}
+
+// Single-use tokens emailed to a user for account verification or password reset.
+// We never store the plaintext — only SHA-256 of the token we sent.
+model EmailToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  purpose   String   // "verify_email" | "password_reset"
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId, purpose])
+}
+
+// Append-only audit trail. Rows are written unchained (fast, never-throw hot
+// path); a sealing pass (lib/auditChain.ts) later assigns chainSeq + prevHash +
+// rowHash so the log becomes tamper-evident. Chains are per-scope (orgId, or a
+// global scope for null-org rows). Signed roots live in AuditAnchor.
+model AuditLog {
+  id         String   @id @default(cuid())
+  // userId/orgId are intentionally NOT foreign keys: audit rows are immutable
+  // and must survive deletion of the user/org they reference. Hashing them in
+  // the chain requires they never change after write.
+  userId     String?
+  // Tenant scope for audit queries. Nullable because some rows (e.g. failed
+  // signup attempts, rate-limit hits) happen before any org is known.
+  orgId      String?
+  action     String
+  targetType String?
+  targetId   String?
+  ip         String?
+  userAgent  String?
+  metadata   String?
+  // Hash chain (populated by the sealing pass; null = not yet sealed).
+  // chainSeq is the 0-based position within this row's scope chain.
+  chainSeq   Int?
+  prevHash   String?
+  rowHash    String?
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([orgId, createdAt])
+  @@index([action, createdAt])
+  @@index([orgId, chainSeq])
+}
+
+// Signed checkpoints over an audit chain. An anchor records the chain head
+// (seq + rowHash) at a point in time plus an HMAC signature under
+// AUDIT_ANCHOR_SECRET. Periodic anchoring (e.g. daily) means an attacker who
+// later rewrites history can't also forge a matching past anchor. `scope` is
+// an org id, or "__global__" for null-org rows.
+model AuditAnchor {
+  id        String   @id @default(cuid())
+  scope     String
+  seq       Int
+  rowHash   String
+  signature String
+  createdAt DateTime @default(now())
+
+  @@index([scope, createdAt])
+}
