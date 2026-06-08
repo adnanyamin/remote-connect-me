@@ -507,6 +507,20 @@ export default function Connect() {
         <header className="px-4 py-2 bg-black/40 flex flex-wrap items-center gap-3 text-sm">
           <button className="px-2 py-1 rounded hover:bg-white/10" onClick={() => router.push('/dashboard')}>← Back</button>
 
+          {status === 'streaming' && (
+            <button
+              className="px-2 py-1 rounded bg-red-700 hover:bg-red-600 text-white"
+              onClick={() => {
+                try { wsRef.current?.close(); } catch {}
+                try { pcRef.current?.close(); } catch {}
+                wsRef.current = null; pcRef.current = null;
+                router.push('/dashboard');
+              }}
+            >
+              Disconnect
+            </button>
+          )}
+
           <span className="text-white/60">Status: <b>{status}</b></span>
           {stats.rtt != null && <span className="text-white/60">RTT: {stats.rtt}ms</span>}
           {stats.res && <span className="text-white/60">{stats.res}</span>}

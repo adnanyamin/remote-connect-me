@@ -172,7 +172,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex gap-2">
                       {canConnect ? (
-                        <Link href={`/connect/${d.id}`} className={online ? 'btn-primary' : 'btn-ghost pointer-events-none opacity-50'}>Connect</Link>
+                        <Link href={`/connect/${d.id}`} className="btn-primary">Connect</Link>
                       ) : (
                         <span className="btn-ghost pointer-events-none opacity-50" title="Viewers can't connect">Connect</span>
                       )}
