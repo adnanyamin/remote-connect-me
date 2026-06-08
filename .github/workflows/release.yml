@@ -57,7 +57,9 @@ jobs:
           # until CSC_LINK / APPLE_ID secrets are added to the repo.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npm --workspace client run dist:${{ matrix.platform }} -- --publish never
+        run: |
+          unset WIN_CSC_LINK CSC_LINK
+          npm --workspace client run dist:${{ matrix.platform }} -- --publish never
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3
