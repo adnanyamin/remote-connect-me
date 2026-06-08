@@ -4,7 +4,7 @@ import Head from 'next/head';
 export default function Landing() {
   return (
     <>
-      <Head><title>RemoteConnectMe — free remote desktop</title></Head>
+      <Head><title>RemoteConnectMe — remote desktop</title></Head>
       <div className="min-h-screen flex flex-col">
         <header className="px-6 py-4 flex items-center justify-between max-w-6xl mx-auto w-full">
           <div className="font-semibold text-lg">RemoteConnectMe</div>
@@ -21,7 +21,7 @@ export default function Landing() {
             </h1>
             <p className="mt-6 text-lg text-white/70">
               Open-source, end-to-end encrypted remote desktop. Install the
-              client, sign in, click connect. Free forever.
+              client, sign in, click connect.
             </p>
             <div className="mt-8 flex justify-center gap-3">
               <Link href="/signup" className="btn-primary">Create a free account</Link>
