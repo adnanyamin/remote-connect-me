@@ -110,6 +110,9 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-white/60">{me?.email}</span>
+            {me?.email === 'ayamin@gmail.com' && (
+              <Link href="/admin" className="btn-ghost">Admin</Link>
+            )}
             <Link href="/settings" className="btn-ghost">Settings</Link>
             <button className="btn-ghost" onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); router.replace('/'); }}>Sign out</button>
           </div>
