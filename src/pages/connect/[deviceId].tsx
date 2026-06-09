@@ -93,6 +93,11 @@ export default function Connect() {
           const msg = JSON.parse(ev.data);
           if (msg.type === 'ready') {
             setStatus('waiting-host');
+            // If no offer arrives in 40s the host is probably offline or restarting.
+            const hostTimeout = setTimeout(() => {
+              setStatus('error');
+              setError('Host did not respond. Make sure RemoteConnectMe is running on the remote PC and try again.');
+            }, 40_000);
             const pc = new RTCPeerConnection({ iceServers: await fetchIceServers() });
             pcRef.current = pc;
 
@@ -101,6 +106,7 @@ export default function Connect() {
             });
 
             pc.addEventListener('track', (e) => {
+              clearTimeout(hostTimeout);
               if (videoRef.current) {
                 videoRef.current.srcObject = e.streams[0];
                 setStatus('streaming');
@@ -506,6 +512,20 @@ export default function Connect() {
       <div className="min-h-screen flex flex-col bg-black text-white">
         <header className="px-4 py-2 bg-black/40 flex flex-wrap items-center gap-3 text-sm">
           <button className="px-2 py-1 rounded hover:bg-white/10" onClick={() => router.push('/dashboard')}>← Back</button>
+
+          {status === 'streaming' && (
+            <button
+              className="px-2 py-1 rounded bg-red-700 hover:bg-red-600 text-white"
+              onClick={() => {
+                try { wsRef.current?.close(); } catch {}
+                try { pcRef.current?.close(); } catch {}
+                wsRef.current = null; pcRef.current = null;
+                router.push('/dashboard');
+              }}
+            >
+              Disconnect
+            </button>
+          )}
 
           <span className="text-white/60">Status: <b>{status}</b></span>
           {stats.rtt != null && <span className="text-white/60">RTT: {stats.rtt}ms</span>}

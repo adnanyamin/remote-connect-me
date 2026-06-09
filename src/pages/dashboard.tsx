@@ -110,6 +110,9 @@ export default function Dashboard() {
           </div>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-white/60">{me?.email}</span>
+            {me?.email === 'ayamin@gmail.com' && (
+              <Link href="/admin" className="btn-ghost">Admin</Link>
+            )}
             <Link href="/settings" className="btn-ghost">Settings</Link>
             <button className="btn-ghost" onClick={async () => { await fetch('/api/auth/logout', { method: 'POST' }); router.replace('/'); }}>Sign out</button>
           </div>
@@ -172,7 +175,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex gap-2">
                       {canConnect ? (
-                        <Link href={`/connect/${d.id}`} className={online ? 'btn-primary' : 'btn-ghost pointer-events-none opacity-50'}>Connect</Link>
+                        <Link href={`/connect/${d.id}`} className="btn-primary">Connect</Link>
                       ) : (
                         <span className="btn-ghost pointer-events-none opacity-50" title="Viewers can't connect">Connect</span>
                       )}
@@ -200,10 +203,13 @@ export default function Dashboard() {
                 className="btn-primary w-full text-center block"
                 download
               >
-                ↓ Download RemoteConnectMe for Windows
+                ↓ Download for Windows
               </a>
+              <Link href="/download" target="_blank" className="btn-ghost w-full text-center block text-sm">
+                Other platforms (Mac, Linux) →
+              </Link>
               <p className="text-xs text-white/40 text-center">
-                After installing, click &quot;Sign in to pair this PC&quot; in the app.
+                After installing, sign in with your account in the app to pair it.
               </p>
               <div className="flex justify-end">
                 <button className="btn-ghost" onClick={() => setShowAddDialog(false)}>Close</button>
