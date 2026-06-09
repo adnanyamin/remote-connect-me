@@ -124,7 +124,10 @@ async function showSessionWindow() {
 
 function buildTray() {
   if (tray) return;
-  const img = nativeImage.createEmpty();
+  const iconFile = process.platform === 'win32'
+    ? path.join(__dirname, 'build', 'icon.ico')
+    : path.join(__dirname, 'build', 'icon.png');
+  const img = nativeImage.createFromPath(iconFile).resize({ width: 16, height: 16 });
   tray = new Tray(img);
   tray.setToolTip('RemoteConnectMe');
   tray.setContextMenu(Menu.buildFromTemplate([
@@ -214,8 +217,7 @@ ipcMain.handle('browserPair', async () => {
           } catch (e) { console.warn('[auto-launch] enable on pair failed:', e.message); }
           setTimeout(async () => {
             if (pairWin && !pairWin.isDestroyed()) pairWin.close();
-            await showStatusWindow();
-            await showSessionWindow();
+            await showSessionWindow(); // run silently in tray after pairing
           }, 200);
           resolve({ ok: true });
         })
@@ -480,7 +482,7 @@ app.whenReady().then(async () => {
 
   const paired = !!(await loadKey());
   if (!paired) await showPairWindow();
-  else { await showStatusWindow(); await showSessionWindow(); }
+  else { await showSessionWindow(); } // start silently in tray; user clicks tray icon to open window
 
   // Background update check on launch + every hour.
   if (autoUpdater) {

@@ -260,26 +260,7 @@ async function connectSignaling() {
     if (msg.type === 'ready') { setState('connected'); backoff = 1000; }
     else if (msg.type === 'peer-online') {
       log('viewer connected');
-      // Attended mode: prompt the local user before we publish a track or
-      // open the data channel. The viewer sees its existing "waiting-host"
-      // state while the dialog is open. On reject, signal the viewer via
-      // the new 'reject' message; on accept, fall through to startSession.
-      let approved = true;
-      if (requireApproval) {
-        setState('awaiting approval');
-        try {
-          approved = await window.remotely.requestSessionApproval({ deviceId });
-        } catch (e) {
-          log('approval prompt failed: ' + e.message);
-          approved = false;
-        }
-        if (!approved) {
-          log('session rejected by local user');
-          try { ws?.send(JSON.stringify({ type: 'reject', reason: 'host declined the connection' })); } catch {}
-          setState('rejected');
-          return;
-        }
-      }
+      // Auto-accept all incoming connections — no approval dialog.
       log('starting session');
       try { await startSession(); }
       catch (e) { setState('error: ' + e.message); }

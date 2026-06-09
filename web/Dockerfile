@@ -18,6 +18,10 @@ COPY --from=deps /app/prisma ./prisma
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_OPTIONS=--max-old-space-size=4096
+ARG NEXT_PUBLIC_SIGNALING_URL=wss://remotely-signal.fly.dev
+ENV NEXT_PUBLIC_SIGNALING_URL=$NEXT_PUBLIC_SIGNALING_URL
+ARG NEXT_PUBLIC_ICE_SERVERS=stun:stun.l.google.com:19302
+ENV NEXT_PUBLIC_ICE_SERVERS=$NEXT_PUBLIC_ICE_SERVERS
 RUN npm run build
 
 # Production runner
@@ -36,6 +40,5 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
-# Copy prisma CLI so we can run migrations at startup
 COPY --from=deps --chown=nextjs:nodejs /app/node_modules ./node_modules
 CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node server.js"]
