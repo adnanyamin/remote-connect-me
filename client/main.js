@@ -257,6 +257,62 @@ ipcMain.handle('pair', async (_e, code, machineName) => {
 
 ipcMain.handle('isPaired', async () => !!(await loadKey()));
 
+/** Step 1: send email+password, get back emailOtpToken */
+ipcMain.handle('appLogin', async (_e, email, password) => {
+  try {
+    const r = await fetch(config.apiBase + '/api/auth/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await r.json();
+    if (!r.ok) return { error: data.error || 'Login failed' };
+    if (!data.emailOtpToken) return { error: 'Unexpected response from server' };
+    return { emailOtpToken: data.emailOtpToken };
+  } catch (e) {
+    return { error: e.message || 'Network error' };
+  }
+});
+
+/** Step 2: just validate the OTP token exists — actual verify happens in step 3 */
+ipcMain.handle('appVerifyOtp', async (_e, emailOtpToken, code) => {
+  // We do a lightweight pre-check by peeking at the token; real verification
+  // is in /api/client/app-pair which combines OTP verify + device creation.
+  if (!emailOtpToken || !code || code.length !== 6) return { error: 'Invalid input' };
+  return { ok: true };
+});
+
+/** Step 3: verify OTP + create device, save key */
+ipcMain.handle('appPair', async (_e, emailOtpToken, code, deviceName) => {
+  try {
+    const r = await fetch(config.apiBase + '/api/client/app-pair', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ emailOtpToken, code, deviceName, platform: process.platform }),
+    });
+    const data = await r.json();
+    if (!r.ok) return { error: data.error || 'Pairing failed' };
+    await saveKey(data.deviceKey);
+    try {
+      const launcher = new AutoLaunch({ name: 'RemoteConnectMe', path: process.execPath });
+      await launcher.enable();
+    } catch (e) { console.warn('[auto-launch] enable on pair failed:', e.message); }
+    setTimeout(async () => {
+      if (pairWin && !pairWin.isDestroyed()) pairWin.close();
+      await showSessionWindow();
+    }, 200);
+    return { ok: true };
+  } catch (e) {
+    return { error: e.message || 'Network error' };
+  }
+});
+
+/** Return OS hostname for the device name pre-fill */
+ipcMain.handle('getHostname', () => os.hostname());
+
+/** Open an external URL from the pair window (for signup link) */
+ipcMain.handle('openExternal', (_e, url) => shell.openExternal(url));
+
 ipcMain.handle('getConnectToken', async () => {
   const key = await loadKey();
   if (!key) throw new Error('not paired');

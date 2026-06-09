@@ -200,10 +200,13 @@ export default function Dashboard() {
                 className="btn-primary w-full text-center block"
                 download
               >
-                ↓ Download RemoteConnectMe for Windows
+                ↓ Download for Windows
               </a>
+              <Link href="/download" target="_blank" className="btn-ghost w-full text-center block text-sm">
+                Other platforms (Mac, Linux) →
+              </Link>
               <p className="text-xs text-white/40 text-center">
-                After installing, click &quot;Sign in to pair this PC&quot; in the app.
+                After installing, sign in with your account in the app to pair it.
               </p>
               <div className="flex justify-end">
                 <button className="btn-ghost" onClick={() => setShowAddDialog(false)}>Close</button>

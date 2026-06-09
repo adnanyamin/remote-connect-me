@@ -6,6 +6,12 @@ contextBridge.exposeInMainWorld('remotely', {
   pair: (code, machineName) => ipcRenderer.invoke('pair', code, machineName),
   browserPair: () => ipcRenderer.invoke('browserPair'),
   isPaired: () => ipcRenderer.invoke('isPaired'),
+  // In-app login pairing (email + password + OTP)
+  appLogin: (email, password) => ipcRenderer.invoke('appLogin', email, password),
+  appVerifyOtp: (token, code) => ipcRenderer.invoke('appVerifyOtp', token, code),
+  appPair: (token, code, name) => ipcRenderer.invoke('appPair', token, code, name),
+  getHostname: () => ipcRenderer.invoke('getHostname'),
+  openExternal: (url) => ipcRenderer.invoke('openExternal', url),
 
   // ---- Auth tokens ----
   getConnectToken: () => ipcRenderer.invoke('getConnectToken'),

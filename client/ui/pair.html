@@ -4,39 +4,192 @@
   <meta charset="utf-8">
   <title>Pair RemoteConnectMe</title>
   <style>
-    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #e7ecf6; margin: 0; padding: 40px 32px; }
-    h1 { margin-top: 0; font-size: 22px; }
-    p { color: rgba(231,236,246,0.7); line-height: 1.6; }
-    button { margin-top: 24px; width: 100%; padding: 14px; border-radius: 8px; border: 0; background: #2a6df4; color: white; font-weight: 600; font-size: 15px; cursor: pointer; }
-    button:disabled { opacity: 0.5; cursor: default; }
-    .err { color: #fca5a5; font-size: 14px; margin-top: 12px; }
-    .waiting { color: rgba(231,236,246,0.6); font-size: 14px; margin-top: 16px; text-align: center; }
-    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; background: #0b1020; color: #e7ecf6; margin: 0; padding: 36px 28px; }
+    h1 { margin: 0 0 6px; font-size: 20px; }
+    .sub { color: rgba(231,236,246,0.55); font-size: 13px; margin: 0 0 24px; }
+    label { display: block; font-size: 13px; color: rgba(231,236,246,0.7); margin-bottom: 4px; }
+    input[type=email], input[type=password], input[type=text] {
+      width: 100%; padding: 10px 12px; border-radius: 7px;
+      border: 1px solid rgba(255,255,255,0.12); background: rgba(255,255,255,0.06);
+      color: #e7ecf6; font-size: 14px; margin-bottom: 14px; outline: none;
+    }
+    input:focus { border-color: #2a6df4; }
+    .btn { width: 100%; padding: 12px; border-radius: 7px; border: 0; background: #2a6df4; color: white; font-weight: 600; font-size: 14px; cursor: pointer; margin-top: 4px; }
+    .btn:disabled { opacity: 0.45; cursor: default; }
+    .btn-ghost { background: transparent; border: 1px solid rgba(255,255,255,0.15); color: rgba(231,236,246,0.65); font-size: 13px; font-weight: 400; }
+    .btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.06); }
+    .err { color: #fca5a5; font-size: 13px; margin: 8px 0 0; min-height: 18px; }
+    .hint { color: rgba(231,236,246,0.45); font-size: 12px; margin: 10px 0 0; text-align: center; }
+    .divider { display: flex; align-items: center; gap: 10px; margin: 18px 0; color: rgba(231,236,246,0.3); font-size: 12px; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.1); }
+    .spinner { display: inline-block; width: 13px; height: 13px; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: middle; margin-right: 6px; }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .step { display: none; }
+    .step.active { display: block; }
+    .otp-row { display: flex; gap: 8px; }
+    .otp-row input { letter-spacing: 0.2em; text-align: center; font-size: 20px; padding: 10px 6px; margin-bottom: 0; }
+    .back { background: none; border: none; color: rgba(231,236,246,0.4); font-size: 12px; cursor: pointer; margin-bottom: 16px; padding: 0; }
+    .back:hover { color: rgba(231,236,246,0.7); }
   </style>
 </head>
 <body>
-  <h1>Pair this PC</h1>
-  <p>Sign in to your RemoteConnectMe account in the browser window that opens. Once signed in, click <b>Pair this device</b> to link this PC to your account.</p>
 
-  <button id="go">Sign in to pair this PC</button>
-  <div id="msg"></div>
+  <!-- Step 1: Email + Password -->
+  <div id="step-login" class="step active">
+    <h1>Sign in to pair this PC</h1>
+    <p class="sub">Connect this computer to your RemoteConnectMe account.</p>
+    <label>Email</label>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email">
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+    <button class="btn" id="btn-login">Continue</button>
+    <div class="err" id="err-login"></div>
+    <div class="divider">or</div>
+    <button class="btn btn-ghost" id="btn-browser">Open browser to sign in</button>
+    <div class="hint">Don't have an account? <a href="https://remoteconnectme-web.fly.dev/signup" style="color:#2a6df4;" id="signup-link">Sign up</a></div>
+  </div>
+
+  <!-- Step 2: Email OTP -->
+  <div id="step-otp" class="step">
+    <button class="back" id="btn-back-login">← Back</button>
+    <h1>Check your email</h1>
+    <p class="sub">We sent a 6-digit code to <span id="email-display"></span>.</p>
+    <label>Verification code</label>
+    <input type="text" id="otp" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code">
+    <button class="btn" id="btn-verify">Verify</button>
+    <div class="err" id="err-otp"></div>
+  </div>
+
+  <!-- Step 3: Device name -->
+  <div id="step-name" class="step">
+    <button class="back" id="btn-back-otp">← Back</button>
+    <h1>Name this device</h1>
+    <p class="sub">Give this PC a name so you can find it on your dashboard.</p>
+    <label>Device name</label>
+    <input type="text" id="device-name" placeholder="My Work PC" maxlength="80">
+    <button class="btn" id="btn-pair">Pair this PC</button>
+    <div class="err" id="err-pair"></div>
+  </div>
 
   <script>
-    const go  = document.getElementById('go');
-    const msg = document.getElementById('msg');
+    const os = { hostname: () => '' }; // filled in from IPC below
 
-    go.addEventListener('click', async () => {
-      go.disabled = true;
-      msg.innerHTML = '<div class="waiting"><span class="spinner"></span>Waiting for browser sign-in…</div>';
+    function show(id) {
+      document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+      document.getElementById(id).classList.add('active');
+    }
+
+    function setErr(id, msg) { document.getElementById(id).textContent = msg || ''; }
+    function setBusy(btnId, busy, label) {
+      const b = document.getElementById(btnId);
+      b.disabled = busy;
+      b.innerHTML = busy ? '<span class="spinner"></span>' + (label || '') : b.dataset.label || b.textContent;
+      if (!b.dataset.label) b.dataset.label = b.textContent;
+    }
+
+    let emailOtpToken = null;
+
+    // ---- Step 1: Login ----
+    document.getElementById('btn-login').addEventListener('click', async () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      setErr('err-login', '');
+      if (!email || !password) { setErr('err-login', 'Email and password are required.'); return; }
+      setBusy('btn-login', true, 'Signing in…');
+      try {
+        const r = await window.remotely.appLogin(email, password);
+        if (r.error) { setErr('err-login', r.error); return; }
+        emailOtpToken = r.emailOtpToken;
+        document.getElementById('email-display').textContent = email;
+        show('step-otp');
+        document.getElementById('otp').focus();
+      } catch (e) {
+        setErr('err-login', e.message || 'Login failed.');
+      } finally {
+        setBusy('btn-login', false);
+      }
+    });
+
+    document.getElementById('password').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btn-login').click();
+    });
+
+    // ---- Browser-based fallback ----
+    document.getElementById('btn-browser').addEventListener('click', async () => {
+      const b = document.getElementById('btn-browser');
+      b.disabled = true;
+      b.textContent = 'Waiting for browser…';
       try {
         await window.remotely.browserPair();
-        // main.js will close this window and open the status window on success
       } catch (e) {
-        msg.className = 'err';
-        msg.textContent = e.message || String(e);
-        go.disabled = false;
+        setErr('err-login', e.message || String(e));
+        b.disabled = false;
+        b.textContent = 'Open browser to sign in';
       }
+    });
+
+    document.getElementById('signup-link').addEventListener('click', (e) => {
+      e.preventDefault();
+      window.remotely.openExternal('https://remoteconnectme-web.fly.dev/signup');
+    });
+
+    // ---- Step 2: OTP verify ----
+    document.getElementById('btn-verify').addEventListener('click', async () => {
+      const code = document.getElementById('otp').value.replace(/\D/g, '');
+      setErr('err-otp', '');
+      if (code.length !== 6) { setErr('err-otp', 'Enter the 6-digit code from your email.'); return; }
+      setBusy('btn-verify', true, 'Verifying…');
+      try {
+        const r = await window.remotely.appVerifyOtp(emailOtpToken, code);
+        if (r.error) { setErr('err-otp', r.error); return; }
+        // OTP ok — move to name step
+        const hostname = await window.remotely.getHostname();
+        document.getElementById('device-name').value = hostname;
+        show('step-name');
+        document.getElementById('device-name').focus();
+      } catch (e) {
+        setErr('err-otp', e.message || 'Verification failed.');
+      } finally {
+        setBusy('btn-verify', false);
+      }
+    });
+
+    document.getElementById('otp').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btn-verify').click();
+    });
+
+    document.getElementById('btn-back-login').addEventListener('click', () => {
+      emailOtpToken = null;
+      setErr('err-otp', '');
+      document.getElementById('otp').value = '';
+      show('step-login');
+    });
+
+    // ---- Step 3: Device name + pair ----
+    document.getElementById('btn-pair').addEventListener('click', async () => {
+      const name = document.getElementById('device-name').value.trim();
+      setErr('err-pair', '');
+      if (!name) { setErr('err-pair', 'Please enter a device name.'); return; }
+      setBusy('btn-pair', true, 'Pairing…');
+      try {
+        const r = await window.remotely.appPair(emailOtpToken, document.getElementById('otp').value.replace(/\D/g, ''), name);
+        if (r.error) { setErr('err-pair', r.error); return; }
+        // Success — main.js closes this window and starts the session
+      } catch (e) {
+        setErr('err-pair', e.message || 'Pairing failed.');
+      } finally {
+        setBusy('btn-pair', false);
+      }
+    });
+
+    document.getElementById('device-name').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('btn-pair').click();
+    });
+
+    document.getElementById('btn-back-otp').addEventListener('click', () => {
+      setErr('err-pair', '');
+      show('step-otp');
     });
   </script>
 </body>
