@@ -1,0 +1,13 @@
+{
+  "name": "remotely-signal",
+  "version": "1.0.0",
+  "description": "WebSocket signaling server for RemoteConnectMe",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "jsonwebtoken": "^9.0.2",
+    "ws": "^8.17.1"
+  }
+}
