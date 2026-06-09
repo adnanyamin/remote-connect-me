@@ -239,6 +239,72 @@ ipcMain.handle('browserPair', async () => {
   });
 });
 
+/**
+ * Browser-based SIGNUP + pair in one flow.
+ * Opens /signup?returnTo=/pair?callback=... so after the user creates an account
+ * and verifies their email, they land on the pair page and the credentials
+ * come back via the same local callback server.
+ * Uses a 15-minute timeout to allow time for email verification.
+ */
+ipcMain.handle('browserSignup', async () => {
+  const http = require('http');
+  return new Promise((resolve, reject) => {
+    let server;
+    const TIMEOUT_MS = 15 * 60 * 1000; // 15 min — user needs to verify email
+    const timeout = setTimeout(() => {
+      try { server?.close(); } catch {}
+      reject(new Error('Signup timed out. Please try again.'));
+    }, TIMEOUT_MS);
+
+    server = http.createServer((req, res) => {
+      clearTimeout(timeout);
+      try { server.close(); } catch {}
+
+      const url = new URL(req.url, 'http://localhost');
+      const deviceKey = url.searchParams.get('deviceKey');
+      const errorMsg = url.searchParams.get('error');
+
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+      res.end(`<!doctype html><html><head><title>Paired!</title></head><body>
+        <p style="font-family:system-ui;text-align:center;margin-top:80px;font-size:18px">
+          ✓ Account created and device paired — you can close this tab.
+        </p>
+        <script>setTimeout(()=>window.close(),1500)</script>
+      </body></html>`);
+
+      if (errorMsg) return reject(new Error(decodeURIComponent(errorMsg)));
+      if (!deviceKey) return reject(new Error('No device key received.'));
+
+      saveKey(deviceKey)
+        .then(async () => {
+          try {
+            const launcher = new AutoLaunch({ name: 'RemoteConnectMe', path: process.execPath });
+            await launcher.enable();
+          } catch (e) { console.warn('[auto-launch] enable on signup failed:', e.message); }
+          setTimeout(async () => {
+            if (pairWin && !pairWin.isDestroyed()) pairWin.close();
+            await showSessionWindow();
+          }, 200);
+          resolve({ ok: true });
+        })
+        .catch(reject);
+    });
+
+    server.on('error', (e) => {
+      clearTimeout(timeout);
+      reject(new Error(`Local server error: ${e.message}`));
+    });
+
+    server.listen(0, '127.0.0.1', () => {
+      const port = server.address().port;
+      const callbackUrl = encodeURIComponent(`http://127.0.0.1:${port}`);
+      const pairReturnTo = encodeURIComponent(`/pair?callback=${callbackUrl}&name=${encodeURIComponent(os.hostname())}&platform=${encodeURIComponent(process.platform)}`);
+      const url = `${config.apiBase}/signup?returnTo=${pairReturnTo}`;
+      shell.openExternal(url);
+    });
+  });
+});
+
 ipcMain.handle('pair', async (_e, code, machineName) => {
   const r = await fetch(config.apiBase + '/api/client/pair', {
     method: 'POST', headers: { 'content-type': 'application/json' },

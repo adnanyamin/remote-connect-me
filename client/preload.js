@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('remotely', {
   config: () => ipcRenderer.invoke('config'),
   pair: (code, machineName) => ipcRenderer.invoke('pair', code, machineName),
   browserPair: () => ipcRenderer.invoke('browserPair'),
+  browserSignup: () => ipcRenderer.invoke('browserSignup'),
   isPaired: () => ipcRenderer.invoke('isPaired'),
   // In-app login pairing (email + password + OTP)
   appLogin: (email, password) => ipcRenderer.invoke('appLogin', email, password),

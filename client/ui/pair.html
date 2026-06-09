@@ -50,9 +50,9 @@
 
     <!-- Secondary: in-app email/password -->
     <button class="btn btn-ghost" id="btn-use-email">Sign in with email &amp; password</button>
+    <button class="btn btn-ghost" id="btn-signup" style="margin-top:8px">Create a new account</button>
 
     <div class="err" id="err-choose"></div>
-    <div class="hint">No account? <a href="#" id="signup-link">Create one free</a></div>
   </div>
 
   <!-- Step 1: Email + Password -->
@@ -127,9 +127,17 @@
       document.getElementById('email').focus();
     });
 
-    document.getElementById('signup-link').addEventListener('click', (e) => {
-      e.preventDefault();
-      window.remotely.openExternal('https://remoteconnectme-web.fly.dev/signup');
+    document.getElementById('btn-signup').addEventListener('click', async () => {
+      setErr('err-choose', '');
+      setBusy('btn-signup', true, 'Opening browser…');
+      try {
+        await window.remotely.browserSignup();
+        // main.js closes this window on success
+      } catch (e) {
+        setErr('err-choose', e.message || String(e));
+      } finally {
+        setBusy('btn-signup', false);
+      }
     });
 
     // ---- Step 1: Login ----

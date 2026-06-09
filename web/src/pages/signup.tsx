@@ -21,7 +21,12 @@ export default function Signup() {
       });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Signup failed');
-      router.push('/dashboard');
+      // If returnTo is set (e.g. from Electron pairing), pass it through verify-email.
+      const returnTo = router.query.returnTo as string | undefined;
+      const dest = returnTo
+        ? `/verify-email?pending=1&returnTo=${encodeURIComponent(returnTo)}`
+        : '/dashboard';
+      router.push(dest);
     } catch (e: any) { setErr(e.message); }
     finally { setBusy(false); }
   }

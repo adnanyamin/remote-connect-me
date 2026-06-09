@@ -8,8 +8,7 @@ export default function VerifyEmail() {
   const [state, setState] = useState<State>('pending');
   const [message, setMessage] = useState('Verifying your email…');
   const [resent, setResent] = useState(false);
-
-  const isPending = router.isReady && router.query.pending === '1';
+  const [returnTo, setReturnTo] = useState<string | null>(null);
 
   useEffect(() => {
     if (!router.isReady) return;
@@ -17,7 +16,12 @@ export default function VerifyEmail() {
     // Redirected here because email isn't verified yet — show "check your inbox" UI
     if (router.query.pending === '1') {
       setState('waiting');
-      setMessage('Check your inbox for a verification link. You must verify your email before accessing the dashboard.');
+      setMessage('Check your inbox for a verification link.');
+      // Persist returnTo so the email-link tab can pick it up after verification.
+      const rt = router.query.returnTo as string | undefined;
+      if (rt) {
+        try { localStorage.setItem('verify_returnTo', rt); } catch {}
+      }
       return;
     }
 
@@ -27,6 +31,7 @@ export default function VerifyEmail() {
       setMessage('Missing token in URL.');
       return;
     }
+
     fetch('/api/auth/verify-email', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -36,7 +41,12 @@ export default function VerifyEmail() {
         const j = await r.json().catch(() => ({}));
         if (r.ok) {
           setState('ok');
-          setMessage('Your email is verified. You can now access the dashboard.');
+          setMessage('Your email is verified!');
+          // Recover returnTo stored when the signup tab saved it.
+          try {
+            const rt = localStorage.getItem('verify_returnTo');
+            if (rt) { setReturnTo(rt); localStorage.removeItem('verify_returnTo'); }
+          } catch {}
         } else {
           setState('error');
           setMessage(j.error || 'Verification failed.');
@@ -67,6 +77,9 @@ export default function VerifyEmail() {
 
         {state === 'waiting' && (
           <div className="mt-4 space-y-3">
+            <p className="text-sm text-gray-600">
+              We sent a verification link to your inbox. Click it to continue.
+            </p>
             <button
               onClick={resendVerification}
               className="inline-block px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
@@ -82,9 +95,25 @@ export default function VerifyEmail() {
         )}
 
         {state === 'ok' && (
-          <a href="/dashboard" className="inline-block mt-4 text-blue-600 hover:underline">
-            Go to dashboard →
-          </a>
+          <div className="mt-4 space-y-3">
+            {returnTo ? (
+              <>
+                <a
+                  href={returnTo}
+                  className="inline-block px-5 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 font-medium"
+                >
+                  Continue pairing your device →
+                </a>
+                <p className="text-sm text-gray-500">
+                  or <a href="/dashboard" className="text-blue-600 hover:underline">go to dashboard</a>
+                </p>
+              </>
+            ) : (
+              <a href="/dashboard" className="inline-block mt-2 text-blue-600 hover:underline">
+                Go to dashboard →
+              </a>
+            )}
+          </div>
         )}
 
         {state === 'error' && (
