@@ -31,16 +31,19 @@ export default function Landing() {
         </main>
 
         <section id="how" className="max-w-5xl mx-auto px-6 py-16 grid sm:grid-cols-3 gap-6">
-          {[
-            { t: '1. Install', d: 'Download the Windows client and pair it to your account in 30 seconds.' },
-            { t: '2. Connect', d: 'Open any browser, hit Connect on your device. WebRTC handles the rest, peer-to-peer.' },
-            { t: '3. Control', d: 'See the screen, type, click, transfer files. Encrypted end-to-end.' },
-          ].map(c => (
-            <div key={c.t} className="card">
-              <div className="font-semibold mb-2">{c.t}</div>
-              <div className="text-white/70 text-sm">{c.d}</div>
-            </div>
-          ))}
+          <Link href="/download" className="card hover:border-white/20 transition-colors">
+            <div className="font-semibold mb-2">1. Install</div>
+            <div className="text-white/70 text-sm">Download the client and pair it to your account in 30 seconds.</div>
+            <div className="text-blue-400 text-xs mt-2">Download →</div>
+          </Link>
+          <div className="card">
+            <div className="font-semibold mb-2">2. Connect</div>
+            <div className="text-white/70 text-sm">Open any browser, hit Connect on your device. WebRTC handles the rest, peer-to-peer.</div>
+          </div>
+          <div className="card">
+            <div className="font-semibold mb-2">3. Control</div>
+            <div className="text-white/70 text-sm">See the screen, type, click, transfer files. Encrypted end-to-end.</div>
+          </div>
         </section>
 
         <footer className="px-6 py-8 text-center text-white/40 text-sm">
