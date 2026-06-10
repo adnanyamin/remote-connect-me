@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>RemoteConnectMe — Viewer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           background: #0b1020; color: #fff; height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Device list ── */
+    #list-view { flex: 1; display: flex; flex-direction: column; padding: 24px; }
+    #list-view h1 { font-size: 18px; font-weight: 600; margin-bottom: 4px; }
+    #list-view p  { font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 20px; }
+    #devices { display: flex; flex-direction: column; gap: 10px; }
+    .device-card {
+      background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+      border-radius: 10px; padding: 14px 16px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .device-info { display: flex; flex-direction: column; gap: 3px; }
+    .device-name { font-weight: 500; font-size: 14px; }
+    .device-meta { font-size: 12px; color: rgba(255,255,255,.4); }
+    .online-dot { width: 8px; height: 8px; border-radius: 50%; background: #22c55e; display: inline-block; margin-right: 6px; }
+    .offline-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,.2); display: inline-block; margin-right: 6px; }
+    .connect-btn {
+      background: #2563eb; color: #fff; border: none; border-radius: 7px;
+      padding: 7px 18px; font-size: 13px; cursor: pointer; font-weight: 500;
+    }
+    .connect-btn:hover { background: #1d4ed8; }
+    .connect-btn:disabled { background: rgba(255,255,255,.1); color: rgba(255,255,255,.3); cursor: not-allowed; }
+    #status-msg { font-size: 13px; color: rgba(255,255,255,.4); margin-top: 16px; }
+    .refresh-btn {
+      background: transparent; color: rgba(255,255,255,.5); border: 1px solid rgba(255,255,255,.15);
+      border-radius: 7px; padding: 6px 14px; font-size: 12px; cursor: pointer; margin-top: 16px;
+    }
+    .refresh-btn:hover { color: #fff; border-color: rgba(255,255,255,.4); }
+
+    /* ── Viewer ── */
+    #viewer-view { flex: 1; display: none; flex-direction: column; }
+    #viewer-bar {
+      background: rgba(0,0,0,.6); padding: 6px 12px;
+      display: flex; align-items: center; gap: 10px; font-size: 12px;
+      -webkit-app-region: drag;
+    }
+    #viewer-bar button { -webkit-app-region: no-drag; }
+    .bar-btn {
+      background: rgba(255,255,255,.1); border: none; color: #fff; border-radius: 5px;
+      padding: 4px 12px; font-size: 12px; cursor: pointer;
+    }
+    .bar-btn:hover { background: rgba(255,255,255,.2); }
+    .bar-btn.red { background: #991b1b; }
+    .bar-btn.red:hover { background: #7f1d1d; }
+    #viewer-status { color: rgba(255,255,255,.5); flex: 1; }
+    #video-wrap { flex: 1; background: #000; display: flex; align-items: center; justify-content: center; position: relative; }
+    #remote-video { width: 100%; height: 100%; object-fit: contain; display: block; cursor: crosshair; }
+    #overlay-msg { position: absolute; color: rgba(255,255,255,.5); font-size: 14px; pointer-events: none; }
+  </style>
+</head>
+<body>
+
+<!-- Device List -->
+<div id="list-view">
+  <h1>Connect to a device</h1>
+  <p>Devices paired to your account</p>
+  <div id="devices"><div id="status-msg">Loading devices…</div></div>
+  <button class="refresh-btn" onclick="loadDevices()">↻ Refresh</button>
+</div>
+
+<!-- Viewer -->
+<div id="viewer-view">
+  <div id="viewer-bar">
+    <button class="bar-btn" id="back-btn" onclick="backToList()">← Back</button>
+    <span id="viewer-status">Connecting…</span>
+    <button class="bar-btn red" id="disconnect-btn" style="display:none" onclick="disconnect()">Disconnect</button>
+    <button class="bar-btn" onclick="toggleFullscreen()">⛶ Fullscreen</button>
+  </div>
+  <div id="video-wrap">
+    <video id="remote-video" autoplay playsinline muted></video>
+    <div id="overlay-msg">Connecting to host…</div>
+  </div>
+</div>
+
+<script src="viewer.js"></script>
+</body>
+</html>

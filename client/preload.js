@@ -23,6 +23,10 @@ contextBridge.exposeInMainWorld('remotely', {
   clipboardRead:       ()          => ipcRenderer.invoke('clipboardRead'),
   clipboardWrite:      (text)      => ipcRenderer.invoke('clipboardWrite', text),
 
+  // Viewer window
+  getDevices:   ()                    => ipcRenderer.invoke('getDevices'),
+  getViewToken: (targetDeviceId)      => ipcRenderer.invoke('getViewToken', targetDeviceId),
+
   onDisconnect: (cb) => {
     ipcRenderer.on('disconnect', () => cb());
   },

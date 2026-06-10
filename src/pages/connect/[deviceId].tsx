@@ -81,6 +81,13 @@ export default function Connect() {
         if (policy === 'required') setRecordWanted(true);
         if (cancelled) return;
 
+        // Fetch ICE servers BEFORE opening the WebSocket so the RTCPeerConnection
+        // can be created synchronously inside the 'ready' handler. If we await
+        // inside the message handler, peer-online and SDP offer messages can
+        // arrive while pcRef.current is still null, causing them to be dropped.
+        const iceServers = await fetchIceServers();
+        if (cancelled) return;
+
         setStatus('connecting');
         const ws = new WebSocket(SIGNALING_URL);
         wsRef.current = ws;
@@ -98,7 +105,7 @@ export default function Connect() {
               setStatus('error');
               setError('Host did not respond. Make sure RemoteConnectMe is running on the remote PC and try again.');
             }, 40_000);
-            const pc = new RTCPeerConnection({ iceServers: await fetchIceServers() });
+            const pc = new RTCPeerConnection({ iceServers });
             pcRef.current = pc;
 
             pc.addEventListener('icecandidate', (e) => {
@@ -598,32 +605,44 @@ export default function Connect() {
         )}
 
         <div className="flex-1 grid place-items-center">
-          {status === 'streaming' ? (
-            <video
-              ref={videoRef}
-              autoPlay playsInline muted
-              className="max-h-full max-w-full outline-none cursor-crosshair touch-none select-none"
-              tabIndex={0}
-              onMouseMove={onMouseMove}
-              onMouseDown={onMouseDown}
-              onMouseUp={onMouseUp}
-              onWheel={onWheel}
-              onContextMenu={onContextMenu}
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              onTouchCancel={onTouchEnd}
-            />
-          ) : status === 'error' ? (
+          {/* Video is always in the DOM so videoRef.current is never null when
+              the track event fires. It's simply hidden until streaming starts. */}
+          <video
+            ref={videoRef}
+            autoPlay playsInline muted
+            className={`max-h-full max-w-full outline-none cursor-crosshair touch-none select-none${status === 'streaming' ? '' : ' hidden'}`}
+            tabIndex={0}
+            onMouseMove={onMouseMove}
+            onMouseDown={onMouseDown}
+            onMouseUp={onMouseUp}
+            onWheel={onWheel}
+            onContextMenu={onContextMenu}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onTouchCancel={onTouchEnd}
+          />
+          {status === 'error' && (
             <div className="text-red-300 max-w-md text-center p-6">
               <p className="font-semibold mb-2">Couldn't connect</p>
               <p className="text-sm">{error}</p>
             </div>
-          ) : (
+          )}
+          {status !== 'streaming' && status !== 'error' && (
             <div className="text-white/60 text-center p-6">
               <p>{status === 'auth' && 'Authorizing…'}
                  {status === 'connecting' && 'Connecting to signaling…'}
-                 {status === 'waiting-host' && 'Waiting for host to accept…'}
+                 {status === 'waiting-host' && 'Connecting to host…'}
+                 {status === 'closed' && 'Disconnected.'}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+g-host' && 'Connecting to host…'}
                  {status === 'closed' && 'Disconnected.'}
               </p>
             </div>

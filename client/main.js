@@ -32,6 +32,7 @@ const TRAY_ICON_B64 =
 let tray        = null;
 let pairWin     = null;
 let sessionWin  = null;
+let viewerWin   = null;
 let paired      = false;
 let pairData    = null;
 
@@ -49,6 +50,30 @@ function savePair(data) {
 }
 
 // ---- API helpers ----
+function apiGet(urlPath, headers = {}) {
+  return new Promise((resolve, reject) => {
+    const url = new URL(API_BASE + urlPath);
+    const mod = url.protocol === 'https:' ? https : http;
+    const req = mod.request({
+      hostname: url.hostname,
+      port: url.port || (url.protocol === 'https:' ? 443 : 80),
+      path: url.pathname + url.search,
+      method: 'GET',
+      headers,
+    }, (res) => {
+      let raw = '';
+      res.on('data', (c) => raw += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, body: JSON.parse(raw) }); }
+        catch { resolve({ status: res.statusCode, body: raw }); }
+      });
+    });
+    req.on('error', reject);
+    req.end();
+  });
+}
+
+
 function apiPost(path, body) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
@@ -93,6 +118,25 @@ function createPairWindow() {
   return pairWin;
 }
 
+function createViewerWindow() {
+  if (viewerWin) { viewerWin.focus(); return viewerWin; }
+  viewerWin = new BrowserWindow({
+    width: 1024, height: 700,
+    minWidth: 640, minHeight: 420,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+    },
+    title: 'RemoteConnectMe — Viewer',
+    autoHideMenuBar: true,
+    backgroundColor: '#0b1020',
+  });
+  viewerWin.loadFile(path.join(__dirname, 'ui', 'viewer.html'));
+  viewerWin.on('closed', () => { viewerWin = null; });
+  return viewerWin;
+}
+
 function createSessionWindow() {
   if (sessionWin) return sessionWin;
   sessionWin = new BrowserWindow({
@@ -125,9 +169,12 @@ function rebuildMenu() {
     { label: 'RemoteConnectMe', enabled: false },
     { type: 'separator' },
     paired
-      ? { label: 'Unpair this device', click: () => { fs.unlinkSync(PAIR_FILE); app.relaunch(); app.exit(0); } }
+      ? { label: 'Connect to a device…', click: () => createViewerWindow() }
       : { label: 'Pair device…', click: () => createPairWindow() },
     { type: 'separator' },
+    paired
+      ? { label: 'Unpair this device', click: () => { fs.unlinkSync(PAIR_FILE); app.relaunch(); app.exit(0); } }
+      : { label: 'Open dashboard', click: () => shell.openExternal(WEB_BASE + '/dashboard') },
     { label: 'Open dashboard', click: () => shell.openExternal(WEB_BASE + '/dashboard') },
     { type: 'separator' },
     { label: 'Quit', click: () => app.quit() },
@@ -337,4 +384,33 @@ ipcMain.handle('clipboardWrite', (_e, text) => {
 
 ipcMain.on('disconnectSession', () => {
   if (sessionWin) sessionWin.webContents.send('disconnect');
+});
+
+// ---- IPC: Viewer window ----
+
+// Returns list of devices paired to this account
+ipcMain.handle('getDevices', async () => {
+  if (!pairData) return { ok: false, error: 'Not paired' };
+  try {
+    const r = await apiPost('/api/client/devices', {
+      deviceId: pairData.deviceId,
+      deviceKey: pairData.deviceKey,
+    });
+    if (r.status !== 200) return { ok: false, error: r.body?.error || 'Failed to load devices' };
+    return { ok: true, devices: r.body.devices || r.body };
+  } catch (e) { return { ok: false, error: e.message }; }
+});
+
+// Returns a short-lived token that lets viewer connect to a specific device
+ipcMain.handle('getViewToken', async (_e, targetDeviceId) => {
+  if (!pairData) return { ok: false, error: 'Not paired' };
+  try {
+    const r = await apiPost('/api/client/view-token', {
+      deviceId: pairData.deviceId,
+      deviceKey: pairData.deviceKey,
+      targetDeviceId,
+    });
+    if (r.status !== 200) return { ok: false, error: r.body?.error || 'Failed to get view token' };
+    return { ok: true, token: r.body.token };
+  } catch (e) { return { ok: false, error: e.message }; }
 });
