@@ -642,13 +642,3 @@ export default function Connect() {
     </>
   );
 }
-g-host' && 'Connecting to host…'}
-                 {status === 'closed' && 'Disconnected.'}
-              </p>
-            </div>
-          )}
-        </div>
-      </div>
-    </>
-  );
-}
