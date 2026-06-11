@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pair Device – RemoteConnectMe</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0b1020; color: #fff;
+      min-height: 100vh; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; padding: 24px;
+      -webkit-app-region: drag;
+    }
+    .card {
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 14px; padding: 32px 28px;
+      width: 100%; max-width: 400px;
+      -webkit-app-region: no-drag;
+    }
+    h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+    .sub { font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 24px; }
+    label { font-size: 12px; color: rgba(255,255,255,.6); display: block; margin-bottom: 5px; }
+    input {
+      width: 100%; background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.15); border-radius: 8px;
+      color: #fff; padding: 10px 12px; font-size: 14px; outline: none;
+      margin-bottom: 14px;
+    }
+    input:focus { border-color: rgba(99,130,255,.7); }
+    .btn {
+      width: 100%; padding: 11px; border-radius: 8px; border: none;
+      font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 10px;
+    }
+    .btn-primary { background: #2563eb; color: #fff; }
+    .btn-primary:hover { background: #1d4ed8; }
+    .btn-primary:disabled { background: rgba(37,99,235,.4); cursor: not-allowed; }
+    .btn-ghost {
+      background: rgba(255,255,255,.07);
+      border: 1px solid rgba(255,255,255,.12);
+      color: rgba(255,255,255,.7);
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,.12); }
+    .divider { text-align: center; color: rgba(255,255,255,.3); font-size: 12px; margin: 4px 0 14px; }
+    .err { color: #f87171; font-size: 13px; margin-bottom: 10px; }
+    .ok  { color: #4ade80; font-size: 13px; margin-bottom: 10px; }
+    .step { display: none; }
+    .step.active { display: block; }
+    .back { background: none; border: none; color: rgba(255,255,255,.4);
+            font-size: 12px; cursor: pointer; margin-bottom: 16px; padding: 0; }
+    .back:hover { color: #fff; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <!-- Step 1: Email + password -->
+  <div class="step active" id="step-login">
+    <h1>Sign in to pair</h1>
+    <p class="sub">Enter your RemoteConnectMe account credentials.</p>
+    <label>Email</label>
+    <input type="email" id="email" placeholder="you@example.com" autocomplete="email" />
+    <label>Password</label>
+    <input type="password" id="password" placeholder="••••••••" autocomplete="current-password" />
+    <div class="err" id="login-err" style="display:none"></div>
+    <button class="btn btn-primary" id="login-btn" onclick="doLogin()">Sign in</button>
+    <div class="divider">or</div>
+    <button class="btn btn-ghost" onclick="doBrowserPair()">Sign in with browser</button>
+  </div>
+
+  <!-- Step 2: OTP -->
+  <div class="step" id="step-otp">
+    <button class="back" onclick="goStep('step-login')">← Back</button>
+    <h1>Check your email</h1>
+    <p class="sub" id="otp-sub">We sent a 6-digit code to your email.</p>
+    <label>Verification code</label>
+    <input type="text" id="otp-code" placeholder="123456" maxlength="6" autocomplete="one-time-code" />
+    <div class="err" id="otp-err" style="display:none"></div>
+    <button class="btn btn-primary" id="otp-btn" onclick="doOtp()">Continue</button>
+  </div>
+
+  <!-- Step 3: Device name -->
+  <div class="step" id="step-name">
+    <button class="back" onclick="goStep('step-otp')">← Back</button>
+    <h1>Name this computer</h1>
+    <p class="sub">Choose a name to identify this PC in your device list.</p>
+    <label>Device name</label>
+    <input type="text" id="device-name" placeholder="e.g. Office PC" maxlength="60" />
+    <div class="err" id="name-err" style="display:none"></div>
+    <button class="btn btn-primary" id="name-btn" onclick="doPair()">Add device</button>
+  </div>
+
+  <!-- Step 4: Done -->
+  <div class="step" id="step-done">
+    <h1>Device added ✓</h1>
+    <p class="sub">This computer is now paired. You can close this window.</p>
+    <div class="ok">RemoteConnectMe is running in your system tray.</div>
+  </div>
+</div>
+
+<script>
+  let emailOtpToken = null;
+
+  function goStep(id) {
+    document.querySelectorAll('.step').forEach(s => s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  function showErr(id, msg) {
+    const el = document.getElementById(id);
+    el.textContent = msg; el.style.display = '';
+  }
+  function hideErr(id) { document.getElementById(id).style.display = 'none'; }
+
+  function setLoading(btnId, loading) {
+    document.getElementById(btnId).disabled = loading;
+    document.getElementById(btnId).textContent = loading ? 'Please wait…' : btnLabels[btnId];
+  }
+  const btnLabels = {
+    'login-btn': 'Sign in',
+    'otp-btn': 'Continue',
+    'name-btn': 'Add device',
+  };
+
+  // Pre-fill device name with hostname
+  window.remotely.getHostname().then(h => {
+    document.getElementById('device-name').value = h || '';
+  });
+
+  // Allow Enter key to submit
+  document.getElementById('password').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('otp-code').addEventListener('keydown', e => { if (e.key === 'Enter') doOtp(); });
+  document.getElementById('device-name').addEventListener('keydown', e => { if (e.key === 'Enter') doPair(); });
+
+  async function doLogin() {
+    hideErr('login-err');
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    if (!email || !password) { showErr('login-err', 'Enter your email and password.'); return; }
+    setLoading('login-btn', true);
+    try {
+      const r = await window.remotely.appLogin(email, password);
+      if (!r.ok) { showErr('login-err', r.error || 'Login failed'); return; }
+      emailOtpToken = r.emailOtpToken;
+      document.getElementById('otp-sub').textContent = `We sent a 6-digit code to ${email}.`;
+      goStep('step-otp');
+      setTimeout(() => document.getElementById('otp-code').focus(), 100);
+    } finally {
+      setLoading('login-btn', false);
+    }
+  }
+
+  async function doOtp() {
+    hideErr('otp-err');
+    const code = document.getElementById('otp-code').value.trim();
+    if (code.length !== 6) { showErr('otp-err', 'Enter the 6-digit code.'); return; }
+    setLoading('otp-btn', true);
+    try {
+      const r = await window.remotely.appVerifyOtp(emailOtpToken, code);
+      if (!r.ok) { showErr('otp-err', r.error || 'Invalid code'); return; }
+      goStep('step-name');
+      setTimeout(() => document.getElementById('device-name').focus(), 100);
+    } finally {
+      setLoading('otp-btn', false);
+    }
+  }
+
+  async function doPair() {
+    hideErr('name-err');
+    const name = document.getElementById('device-name').value.trim();
+    if (!name) { showErr('name-err', 'Enter a name for this device.'); return; }
+    setLoading('name-btn', true);
+    try {
+      const r = await window.remotely.appPair(emailOtpToken, document.getElementById('otp-code').value.trim(), name);
+      if (!r.ok) { showErr('name-err', r.error || 'Pairing failed'); return; }
+      goStep('step-done');
+    } finally {
+      setLoading('name-btn', false);
+    }
+  }
+
+  async function doBrowserPair() {
+    const btn = document.querySelector('.btn-ghost');
+    btn.disabled = true; btn.textContent = 'Opening browser…';
+    const r = await window.remotely.browserPair();
+    if (!r.ok) {
+      btn.disabled = false; btn.textContent = 'Sign in with browser';
+      alert(r.error || 'Browser pairing failed');
+    }
+    // On success main.js closes this window automatically
+  }
+</script>
+</body>
+</html>

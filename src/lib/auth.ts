@@ -145,6 +145,27 @@ export async function getDeviceFromAuthHeader(req: NextApiRequest) {
   return ok ? device : null;
 }
 
+/**
+ * Authenticates an Electron client request, accepting credentials from either:
+ *   - Authorization: Bearer <deviceId>.<secret>  (new clients v0.1.27+)
+ *   - POST body { deviceId, deviceKey }           (legacy clients before v0.1.27)
+ */
+export async function getDeviceFromRequest(req: NextApiRequest) {
+  // Prefer header auth
+  const fromHeader = await getDeviceFromAuthHeader(req);
+  if (fromHeader) return fromHeader;
+
+  // Fall back to body auth for legacy clients
+  const { deviceId, deviceKey } = req.body ?? {};
+  if (!deviceId || !deviceKey) return null;
+  const device = await prisma.device.findUnique({ where: { id: String(deviceId) } });
+  if (!device) return null;
+  const dot = String(deviceKey).indexOf('.');
+  const secret = dot >= 0 ? String(deviceKey).slice(dot + 1) : '';
+  const ok = await bcrypt.compare(secret, device.deviceKeyHash);
+  return ok ? device : null;
+}
+
 /** Generates a (device key, hash) pair. The plaintext is returned to the client once. */
 export async function generateDeviceKey(deviceId: string) {
   const secret = randomToken(40);

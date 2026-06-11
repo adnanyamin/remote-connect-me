@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8" /><title>RemoteConnectMe Session</title></head>
+<body>
+<script>
+'use strict';
+// Background session worker — no visible UI.
+// Keeps the host connected to the signaling server and handles WebRTC streaming.
+
+const log = (msg) => window.remotely.log(msg);
+
+let cfg = null;
+let ws = null;
+let pc = null;
+let dc = null;
+let stream = null;
+let reconnectTimer = null;
+let heartbeatTimer = null;
+let token = null;
+let iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+
+const STATE = (s) => { log('STATE: ' + s); };
+
+async function init() {
+  cfg = await window.remotely.config();
+  iceServers = (await window.remotely.getTurnCredentials().catch(() => ({ iceServers }))).iceServers || iceServers;
+  connect();
+}
+
+async function refreshToken() {
+  const r = await window.remotely.getConnectToken();
+  token = r.token;
+  return token;
+}
+
+async function connect() {
+  clearTimeout(reconnectTimer);
+  clearInterval(heartbeatTimer);
+  try { ws && ws.close(); } catch {}
+  try { pc && pc.close(); } catch {}
+  ws = null; pc = null; dc = null; stream = null;
+
+  STATE('auth');
+  try {
+    await refreshToken();
+  } catch (e) {
+    STATE('error: ' + e.message);
+    reconnectTimer = setTimeout(connect, 15_000);
+    return;
+  }
+
+  STATE('connecting');
+  const sigUrl = cfg.signalingUrl;
+  ws = new WebSocket(sigUrl);
+
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'hello', role: 'host', token }));
+    // Heartbeat to keep connection alive
+    heartbeatTimer = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping' }));
+    }, 25_000);
+  };
+
+  ws.onclose = () => {
+    STATE('closed');
+    clearInterval(heartbeatTimer);
+    reconnectTimer = setTimeout(connect, 5_000);
+  };
+
+  ws.onerror = () => {
+    STATE('ws-error');
+  };
+
+  ws.onmessage = async (evt) => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+
+    if (msg.type === 'connected') {
+      STATE('connected');
+    } else if (msg.type === 'viewer-ready') {
+      // A viewer wants to connect — always accept (no approval prompt)
+      await startSession();
+    } else if (msg.type === 'signal') {
+      await handleSignal(msg.payload);
+    } else if (msg.type === 'bye') {
+      STATE('idle');
+      try { pc && pc.close(); } catch {}
+      pc = null; dc = null;
+      try { stream && stream.getTracks().forEach(t => t.stop()); } catch {}
+      stream = null;
+    } else if (msg.type === 'token-expired') {
+      // Token expired mid-session, refresh and reconnect
+      clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 500);
+    }
+  };
+}
+
+function send(obj) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(obj));
+  }
+}
+
+async function startSession() {
+  STATE('streaming');
+  try {
+    // Get screen sources and pick the first screen
+    const sources = await window.remotely.getScreenSources();
+    const src = sources[0];
+    if (!src) { STATE('error: no screen source'); return; }
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        mandatory: {
+          chromeMediaSource: 'desktop',
+          chromeMediaSourceId: src.id,
+        }
+      }
+    });
+
+    pc = new RTCPeerConnection({ iceServers });
+
+    stream.getTracks().forEach(t => pc.addTrack(t, stream));
+
+    // Data channel for input events
+    dc = pc.createDataChannel('input', { ordered: true });
+    dc.onmessage = (e) => {
+      try { window.remotely.inject(JSON.parse(e.data)); } catch {}
+    };
+    dc.onopen = () => { log('data channel open'); };
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) send({ type: 'signal', payload: { type: 'candidate', candidate: e.candidate } });
+    };
+
+    pc.onconnectionstatechange = () => {
+      log('PC state: ' + pc.connectionState);
+      if (pc.connectionState === 'disconnected' || pc.connectionState === 'failed') {
+        try { pc.close(); } catch {}
+        try { stream.getTracks().forEach(t => t.stop()); } catch {}
+        pc = null; dc = null; stream = null;
+        STATE('idle');
+      }
+    };
+  } catch (e) {
+    STATE('error: ' + e.message);
+  }
+}
+
+async function handleSignal(payload) {
+  if (!pc) return;
+  if (payload.type === 'offer') {
+    await pc.setRemoteDescription({ type: 'offer', sdp: payload.sdp });
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    send({ type: 'signal', payload: { type: 'answer', sdp: answer.sdp } });
+  } else if (payload.type === 'answer') {
+    await pc.setRemoteDescription({ type: 'answer', sdp: payload.sdp });
+  } else if (payload.type === 'candidate' && payload.candidate) {
+    try { await pc.addIceCandidate(payload.candidate); } catch {}
+  }
+}
+
+// Main process can trigger disconnect
+window.remotely.onDisconnect(() => {
+  try { ws && ws.close(); } catch {}
+  try { pc && pc.close(); } catch {}
+  ws = null; pc = null;
+});
+
+// Start
+init();
+</script>
+</body>
+</html>

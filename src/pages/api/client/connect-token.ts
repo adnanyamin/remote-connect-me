@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
 import { prisma } from '@/lib/db';
-import { getDeviceFromAuthHeader, signSignalingToken } from '@/lib/auth';
+import { getDeviceFromRequest, signSignalingToken } from '@/lib/auth';
 
 /**
  * Called by the Electron client (host) periodically. It exchanges its long-lived
@@ -11,7 +11,7 @@ import { getDeviceFromAuthHeader, signSignalingToken } from '@/lib/auth';
  */
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method not allowed' });
-  const device = await getDeviceFromAuthHeader(req);
+  const device = await getDeviceFromRequest(req);
   if (!device) return res.status(401).json({ error: 'invalid device key' });
 
   await prisma.device.update({

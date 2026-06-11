@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import { getSessionUser, getDeviceFromAuthHeader } from '@/lib/auth';
+import { getSessionUser, getDeviceFromRequest } from '@/lib/auth';
 import { issueTurnCredentials } from '@/lib/turn';
 import { limit, BUCKETS } from '@/lib/ratelimit';
 import { writeAudit } from '@/lib/audit';
@@ -24,7 +24,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
     userId = user.id;
   } else {
-    const device = await getDeviceFromAuthHeader(req);
+    const device = await getDeviceFromRequest(req);
     if (!device) return res.status(401).json({ error: 'auth required' });
     userId = device.userId;
   }
