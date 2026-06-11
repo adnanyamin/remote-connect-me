@@ -1,6 +1,6 @@
 {
   "name": "remoteconnectme-client",
-  "version": "0.1.25",
+  "version": "0.1.27",
   "description": "RemoteConnectMe desktop client",
   "main": "main.js",
   "scripts": {
@@ -14,7 +14,13 @@
     "files": ["main.js", "preload.js", "ui/**", "lib/**"],
     "publish": [{ "provider": "github", "owner": "adnanyamin", "repo": "remote-connect-me" }],
     "win": { "target": [{ "target": "nsis" }], "icon": "build/icon.ico" },
-    "nsis": { "oneClick": false, "perMachine": true, "allowToChangeInstallationDirectory": true },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": true,
+      "allowElevation": true,
+      "deleteAppDataOnUninstall": false,
+      "uninstallDisplayName": "RemoteConnectMe"
+    },
     "mac": {
       "target": [{ "target": "dmg" }, { "target": "zip" }],
       "category": "public.app-category.utilities",
