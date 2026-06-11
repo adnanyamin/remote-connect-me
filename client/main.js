@@ -74,7 +74,7 @@ function apiGet(urlPath, headers = {}) {
 }
 
 
-function apiPost(path, body) {
+function apiPost(path, body, extraHeaders = {}) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify(body);
     const url = new URL(API_BASE + path);
@@ -84,7 +84,11 @@ function apiPost(path, body) {
       port: url.port || (url.protocol === 'https:' ? 443 : 80),
       path: url.pathname + url.search,
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(data) },
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': Buffer.byteLength(data),
+        ...extraHeaders,
+      },
     }, (res) => {
       let raw = '';
       res.on('data', (c) => raw += c);
@@ -97,6 +101,12 @@ function apiPost(path, body) {
     req.write(data);
     req.end();
   });
+}
+
+// Authenticated POST using the paired device key as a Bearer token
+function apiPostAuth(path, body = {}) {
+  if (!pairData) return Promise.reject(new Error('Not paired'));
+  return apiPost(path, body, { Authorization: `Bearer ${pairData.deviceKey}` });
 }
 
 // ---- Windows ----
@@ -312,10 +322,7 @@ ipcMain.handle('config', () => ({
 
 ipcMain.handle('getConnectToken', async () => {
   if (!pairData) throw new Error('Not paired');
-  const r = await apiPost('/api/client/connect-token', {
-    deviceId: pairData.deviceId,
-    deviceKey: pairData.deviceKey,
-  });
+  const r = await apiPostAuth('/api/client/connect-token');
   if (r.status !== 200) throw new Error(r.body?.error || 'connect-token failed');
   return r.body;
 });
@@ -323,10 +330,7 @@ ipcMain.handle('getConnectToken', async () => {
 ipcMain.handle('getTurnCredentials', async () => {
   if (!pairData) return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
   try {
-    const r = await apiPost('/api/turn-credentials', {
-      deviceId: pairData.deviceId,
-      deviceKey: pairData.deviceKey,
-    });
+    const r = await apiPostAuth('/api/turn-credentials');
     if (r.status === 200) return r.body;
   } catch {}
   return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
@@ -392,10 +396,7 @@ ipcMain.on('disconnectSession', () => {
 ipcMain.handle('getDevices', async () => {
   if (!pairData) return { ok: false, error: 'Not paired' };
   try {
-    const r = await apiPost('/api/client/devices', {
-      deviceId: pairData.deviceId,
-      deviceKey: pairData.deviceKey,
-    });
+    const r = await apiPostAuth('/api/client/devices');
     if (r.status !== 200) return { ok: false, error: r.body?.error || 'Failed to load devices' };
     return { ok: true, devices: r.body.devices || r.body };
   } catch (e) { return { ok: false, error: e.message }; }
@@ -405,11 +406,7 @@ ipcMain.handle('getDevices', async () => {
 ipcMain.handle('getViewToken', async (_e, targetDeviceId) => {
   if (!pairData) return { ok: false, error: 'Not paired' };
   try {
-    const r = await apiPost('/api/client/view-token', {
-      deviceId: pairData.deviceId,
-      deviceKey: pairData.deviceKey,
-      targetDeviceId,
-    });
+    const r = await apiPostAuth('/api/client/view-token', { targetDeviceId });
     if (r.status !== 200) return { ok: false, error: r.body?.error || 'Failed to get view token' };
     return { ok: true, token: r.body.token };
   } catch (e) { return { ok: false, error: e.message }; }
