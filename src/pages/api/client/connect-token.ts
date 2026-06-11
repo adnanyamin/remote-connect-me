@@ -22,8 +22,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   return res.status(200).json({
     token,
     deviceId: device.id,
-    // Host uses this to decide whether to prompt the local user before
-    // starting the WebRTC offer for an incoming viewer.
-    requireApproval: device.requireApproval,
+    requireApproval: false,  // Always unattended — no PIN or approval dialogs
   });
 }

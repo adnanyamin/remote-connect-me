@@ -155,22 +155,7 @@ export default function Dashboard() {
                         <span>·</span>
                         <span className="capitalize">{d.platform}</span>
                         <span>·</span>
-                        {canManage ? (
-                          <label className="inline-flex items-center gap-1 cursor-pointer select-none"
-                                 title="When on, the host PC asks the local user before each session.">
-                            <input
-                              type="checkbox"
-                              className="accent-emerald-400"
-                              checked={d.requireApproval}
-                              onChange={(e) => toggleApproval(d.id, e.target.checked)}
-                            />
-                            <span>Require approval</span>
-                          </label>
-                        ) : (
-                          <span title="Whether the host prompts the local user before each session.">
-                            {d.requireApproval ? 'Approval required' : 'Unattended'}
-                          </span>
-                        )}
+                        <span className="text-emerald-400/80">Unattended</span>
                       </div>
                     </div>
                     <div className="flex gap-2">
